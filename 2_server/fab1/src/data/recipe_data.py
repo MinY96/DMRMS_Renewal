@@ -20,6 +20,7 @@ def equipment_summary() -> list[dict]:
         recipe AS recipe_count,
         matching AS matching_count,
         non_matching AS non_matching_count,
+        exclude_matching,
         matching_rate,
         aggregation_time
     FROM dm_matching_rate 

@@ -1,0 +1,41 @@
+DM RMS 시스템을 리뉴얼하려고 해.
+과거 진행했던 이력은 소스에 있는 DM_RMS_21차.zip 파일을 확인하면 될꺼야.
+
+현재 프로젝트는 github에 올려놨어.
+https://github.com/MinY96/DMRMS_Renewal.git
+
+폴더는 현재 1_backup, 2_server, 3_frontend로 구성되어 있어.
+1_backup 폴더와 2_server 폴더는 실제로는 각각 fab1, fab2 서버 PC에서 동작해.
+1_backup은 일정 주기로 장비에서 Recipe를 백업하고 DB를 업데이트하는 서버야.
+2_server는 frontend에서 요청하는 Data를 반환해주는 API 서버야. 
+3_frontend는 사용자 설치 프로그램으로, fab1/fab2 사업장에 맞게 로그인 후에 기능을 이용하는거야.
+
+현재 backup, server는 리뉴얼을 마쳤고,
+frontend만 리뉴얼이 남은 상태야.
+
+우선 예전 프로젝트와는 다르게 DB 테이블이 살짝 변경이 되었어. 어짜피 frontend에서는 DB에 직접 접근하는 일은 없고
+모두 API를 통해 데이터를 받으니까 큰 상관은 없어. server 코드에서 DB 연결은 다 확인한 상태야.
+실제 Databases를 dump-dm_rms_202611051725 커스텀 파일로 백업해놨어. 너가 볼 수 있다면 확인해봐
+
+변경이 필요한 부분은 다음과 같아
+1) Recipe 관리 탭
+- 장비 별 Recipe 현황 테이블에서 no_master 컬럼 삭제됨
+
+2) Master Recipe 관리 탭
+- 필터 새로고침/신규 Master 생성 있는 그룹에 Model 선택 콤보박스 추가
+- 하단 Master Recipe 기준 정보 필터에서 Model 선택 콤보박스, 초기화 버튼 제거
+- Model 선택 시 그에 맞는 기준 정보 필터 자동 초기화
+- Fab2 로그인 후 Master Recipe 관리 탭 들어갔을 때 Master 기준 정보 필터 내 중복되는 옵션들 생기는 문제 해결
+    현재: Tech Prod,Tech,Prod Group, Level, Layer, Mode, Model 옵션이 두개씩 생성됨
+    신규 Master 생성 팝업에서도 좌측 기준 정보가 두개씩 생성됨
+- 신규 Master 생성 클릭 시 기존에 선택한 Model에 해당하는 기준 정보만 생성되도록 수정
+- 신규 Master 생성 팝업 내에 현재 선택한 Model 표시
+- Model를 선택 안하면 신규 Master Recipe 생성 버튼 비활성화
+
+3) 사용자 신규 등록 기능 활성화
+- 현재는 신규 등록 클릭 시 사업장/아이디/패스워드/표시 이름 입력 후 등록 해도 생성되지는 않음
+- server와 DB 테이블 수정 필요함
+
+4) 기타
+- frontend 코드를 보고 불필요한 코드나 복잡한 부분은 깔끔하게 리팩토링 부탁해
+- UI/UX 적으로 개선할 수 있는 부분이 있다면 일단 진행은 하지 말고 개선 가능한 사항을 따로 알려줘
