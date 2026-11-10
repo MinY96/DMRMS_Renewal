@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using DM_RMS.Wpf.Models;
 
 namespace DM_RMS.Wpf.Services;
@@ -44,8 +44,11 @@ public sealed class DmRmsApiService
     public Task<byte[]> DownloadRecipeReportAsync()
         => _api.DownloadFileAsync("/api/recipe/report");
 
-    public Task<ApiResponse<JsonElement>> GetMasterFilterOptionsAsync()
-        => _api.GetAsync<JsonElement>("/api/master/filter-options");
+    public Task<ApiResponse<List<string>>> GetMasterModelOptionsAsync()
+        => _api.GetAsync<List<string>>("/api/master/models");
+
+    public Task<ApiResponse<JsonElement>> GetMasterFilterOptionsAsync(string model)
+        => _api.GetAsync<JsonElement>($"/api/master/filter-options?model={Uri.EscapeDataString(model)}");
 
     public Task<ApiResponse<DataFrameResponse>> GetMasterListAsync(MasterListRequest request)
         => _api.PostAsync<DataFrameResponse>("/api/master/list", request);
@@ -59,14 +62,14 @@ public sealed class DmRmsApiService
     public Task<ApiResponse<JsonElement>> DeleteMasterAsync(string masterKey)
         => _api.DeleteAsync<JsonElement>($"/api/master/detail/{Uri.EscapeDataString(masterKey)}");
 
-    public Task<ApiResponse<List<MasterParameterDto>>> GetMasterParameterOptionsAsync()
-        => _api.GetAsync<List<MasterParameterDto>>("/api/master/parameters/options");
+    public Task<ApiResponse<List<MasterParameterDto>>> GetMasterParameterOptionsAsync(string model)
+        => _api.GetAsync<List<MasterParameterDto>>($"/api/master/parameters/options?model={Uri.EscapeDataString(model)}");
 
-    public Task<ApiResponse<MasterDetailResponse>> GetNewMasterTemplateAsync()
-        => _api.GetAsync<MasterDetailResponse>("/api/master/template");
+    public Task<ApiResponse<MasterDetailResponse>> GetNewMasterTemplateAsync(string model)
+        => _api.GetAsync<MasterDetailResponse>($"/api/master/template?model={Uri.EscapeDataString(model)}");
 
-    public Task<ApiResponse<JsonElement>> CreateMasterAsync(MasterCreateRequest request)
-        => _api.PostAsync<JsonElement>("/api/master/create", request);
+    public Task<ApiResponse<JsonElement>> CreateMasterAsync(string model, MasterCreateRequest request)
+        => _api.PostAsync<JsonElement>($"/api/master/create?model={Uri.EscapeDataString(model)}", request);
 
     public Task<ApiResponse<List<string>>> GetDashboardModelOptionsAsync()
     {

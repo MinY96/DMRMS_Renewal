@@ -234,7 +234,7 @@ def no_master_detail(model: str) -> Tuple[pd.DataFrame, Tuple[Any, Any, Any]]:
     if frame.empty:
         return pd.DataFrame(
             columns=id_columns + ["master_group"] + master_columns + params
-        )
+        ), ([], [], [])
     pivot = frame.pivot_table(
         index=["recipe_key"],
         columns=["para_nm"],

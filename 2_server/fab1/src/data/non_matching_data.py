@@ -265,8 +265,8 @@ def non_matching_detail() -> pd.DataFrame:
         dri.mode,
         drp.para_nm,
         drp.para_value,
-        drp.matching
-        dmrp.para_value master_value,
+        drp.matching,
+        dmrp.para_value master_value
     FROM dm_recipe_info dri 
     LEFT JOIN dm_recipe_para drp 
         ON (dri.recipe_key = drp.recipe_key)

@@ -35,9 +35,13 @@ def models():
     """GET: 모델 리스트 정보 요청"""
     values = PostgresCRUD.select_query_by_list(
         """
-        SELECT DISTINCT dmr.model 
-        FROM dm_matching_rate dmr 
-        ORDER BY dmr.model
+        SELECT model FROM (
+            SELECT model FROM dm_matching_rate
+            UNION
+            SELECT model FROM dm_master_recipe_info
+        ) t
+        WHERE model IS NOT NULL AND BTRIM(model) <> ''
+        ORDER BY model
         """
     )
     return ok(values, "list", "Model 목록 조회 성공", {"fab": CURRENT_FAB})

@@ -1,14 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.37314.3 d17.14
+VisualStudioVersion = 17.14.37314.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DM_RMS.Wpf", "DM_RMS.Wpf\DM_RMS.Wpf.csproj", "{1E396FF9-67B8-4FEE-A0F8-2B771B88BE1D}"
-EndProject
-Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "DM_RMS.Setup", "DM_RMS.Setup\DM_RMS.Setup.vdproj", "{6FFD9981-2FCE-4B8D-B660-60648BEF484F}"
-	ProjectSection(ProjectDependencies) = postProject
-		{1E396FF9-67B8-4FEE-A0F8-2B771B88BE1D} = {1E396FF9-67B8-4FEE-A0F8-2B771B88BE1D}
-	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -16,9 +11,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{6FFD9981-2FCE-4B8D-B660-60648BEF484F}.Debug|Any CPU.ActiveCfg = Debug
-		{6FFD9981-2FCE-4B8D-B660-60648BEF484F}.Release|Any CPU.ActiveCfg = Release
-		{6FFD9981-2FCE-4B8D-B660-60648BEF484F}.Release|Any CPU.Build.0 = Release
 		{1E396FF9-67B8-4FEE-A0F8-2B771B88BE1D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{1E396FF9-67B8-4FEE-A0F8-2B771B88BE1D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1E396FF9-67B8-4FEE-A0F8-2B771B88BE1D}.Release|Any CPU.ActiveCfg = Release|Any CPU

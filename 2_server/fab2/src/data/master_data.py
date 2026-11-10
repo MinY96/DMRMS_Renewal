@@ -195,17 +195,17 @@ def default_new_master_template(model: str) -> dict:
         COALESCE(t.para_type, 'STRING') AS control_type
         FROM dm_master_recipe_para p
         LEFT JOIN dm_para_type t ON p.para_nm=t.para_nm
-        WHERE p.master_key like %s
-            AND	p.master_key=(
-                SELECT master_key 
-                FROM dm_master_recipe_info 
-                ORDER BY master_key DESC 
-                LIMIT 1
-            )
+        WHERE p.master_key = (
+            SELECT i.master_key
+            FROM dm_master_recipe_info i
+            WHERE i.model = %s
+            ORDER BY i.master_key DESC
+            LIMIT 1
+        )
             AND p.para_nm<>'mode'
         ORDER BY p.para_nm
         """,
-        (f"{model}%",),
+        (model,),
     ).to_dict(orient="records")
     return {"parameters": rows}
 
@@ -276,6 +276,10 @@ def create_master(model: str, criteria: dict, parameters: list[dict]) -> dict:
     Returns:
         dict: 처리 결과.
     """
+    if not model:
+        raise ValueError("Model을 선택해야 Master Recipe를 생성할 수 있습니다.")
+    if criteria.get("model") != model:
+        raise ValueError("선택 Model과 요청 기준정보의 Model이 일치하지 않습니다.")
     if model != "PUMA":
         require_criteria = REQUIRED_CRITERIA_KLA
         dup_check_query = """

@@ -18,10 +18,12 @@ public sealed class NewMasterViewModel : BaseViewModel
     public NewMasterViewModel(
         DmRmsApiService api,
         IDialogService dialog,
-        IEnumerable<MasterFilterItem> sourceFilters)
+        IEnumerable<MasterFilterItem> sourceFilters,
+        string selectedModel)
     {
         _api = api;
         _dialog = dialog;
+        SelectedModel = selectedModel;
 
         Criteria = new ObservableCollection<MasterFilterItem>(CloneCriteriaFilters(sourceFilters));
         Parameters = new ObservableCollection<MasterParameterItem>();
@@ -33,6 +35,8 @@ public sealed class NewMasterViewModel : BaseViewModel
         CreateMasterCommand = new AsyncRelayCommand(_ => CreateMasterAsync());
         CloseCommand = new RelayCommand(_ => RequestClose?.Invoke(false));
     }
+
+    public string SelectedModel { get; }
 
     public ObservableCollection<MasterFilterItem> Criteria { get; }
     public ObservableCollection<MasterParameterItem> Parameters { get; }
@@ -66,12 +70,12 @@ public sealed class NewMasterViewModel : BaseViewModel
         {
             StatusMessage = "신규 Master 기본 데이터 조회 중...";
 
-            var parameterResponse = await _api.GetMasterParameterOptionsAsync();
+            var parameterResponse = await _api.GetMasterParameterOptionsAsync(SelectedModel);
             ParameterOptions.Clear();
             foreach (var option in parameterResponse.Data ?? new List<MasterParameterDto>())
                 ParameterOptions.Add(option);
 
-            var templateResponse = await _api.GetNewMasterTemplateAsync();
+            var templateResponse = await _api.GetNewMasterTemplateAsync(SelectedModel);
             Parameters.Clear();
             foreach (var dto in templateResponse.Data?.Parameters ?? new List<MasterParameterDto>())
             {
@@ -209,6 +213,11 @@ public sealed class NewMasterViewModel : BaseViewModel
 
     private async Task CreateMasterAsync()
     {
+        if (string.IsNullOrWhiteSpace(SelectedModel))
+        {
+            _dialog.ShowInfo("Model 선택이 필요합니다.");
+            return;
+        }
         try
         {
             if (Parameters.Count == 0)
@@ -233,6 +242,8 @@ public sealed class NewMasterViewModel : BaseViewModel
                 _dialog.ShowInfo("좌측 기준정보를 하나 이상 입력하세요.");
                 return;
             }
+            // Model은 상위 화면에서 선택한 값으로 고정하며, 팝업에서 수정하지 않습니다.
+            criteria["model"] = SelectedModel;
 
             var request = new MasterCreateRequest
             {
@@ -241,7 +252,7 @@ public sealed class NewMasterViewModel : BaseViewModel
             };
 
             StatusMessage = "신규 Master 생성 요청 중...";
-            var response = await _api.CreateMasterAsync(request);
+            var response = await _api.CreateMasterAsync(SelectedModel, request);
             Created = true;
             StatusMessage = response.Message;
             _dialog.ShowInfo(response.Message);
@@ -256,8 +267,13 @@ public sealed class NewMasterViewModel : BaseViewModel
 
     private static IEnumerable<MasterFilterItem> CloneCriteriaFilters(IEnumerable<MasterFilterItem> sourceFilters)
     {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var source in sourceFilters)
         {
+            var key = source.Key.Replace("_like", string.Empty, StringComparison.OrdinalIgnoreCase);
+            if (string.Equals(key, "model", StringComparison.OrdinalIgnoreCase) || !seen.Add(key))
+                continue;
+
             var clone = new MasterFilterItem
             {
                 Key = source.Key,

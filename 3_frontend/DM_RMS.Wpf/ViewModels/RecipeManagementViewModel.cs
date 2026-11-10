@@ -1,4 +1,4 @@
-﻿using DM_RMS.Wpf.Commands;
+using DM_RMS.Wpf.Commands;
 using DM_RMS.Wpf.Helpers;
 using DM_RMS.Wpf.Models;
 using DM_RMS.Wpf.Services;
@@ -14,6 +14,7 @@ public sealed class RecipeManagementViewModel : BaseViewModel
 {
     private const int MaxSelectedRecipeCount = 500;
     public static readonly string[] RecipeListHiddenColumns = { "internal_id", "recipe_key", "no_master" };
+    public static readonly string[] EquipmentSummaryHiddenColumns = { "internal_id", "recipe_key", "no_master" };
     public static readonly string[] RecipeDetailHiddenColumns = { "internal_id" };
     private readonly DmRmsApiService _api;
     private readonly IDialogService _dialog;
@@ -54,11 +55,11 @@ public sealed class RecipeManagementViewModel : BaseViewModel
         DeleteSelectedRecipesCommand = new AsyncRelayCommand(
             _ => DeleteSelectedRecipesAsync(),
             _ => CanDeleteRecipes && HasBackupPath);
-        CopyEquipmentSummaryCommand = new RelayCommand(_ => DataTableExportHelper.CopyToClipboard(EquipmentSummaryView));
+        CopyEquipmentSummaryCommand = new RelayCommand(_ => DataTableExportHelper.CopyToClipboard(EquipmentSummaryView, EquipmentSummaryHiddenColumns));
         CopyRecipeListCommand = new RelayCommand(_ => DataTableExportHelper.CopyToClipboard(RecipeListView, RecipeListHiddenColumns));
         CopyRecipeDetailCommand = new RelayCommand(_ => DataTableExportHelper.CopyToClipboard(RecipeDetailView, RecipeDetailHiddenColumns));
         ExportRecipeListCsvCommand = new RelayCommand(_ => ExportCsv(RecipeListView, "recipe_list.csv", RecipeListHiddenColumns));
-        ExportEquipmentSummaryExcelCommand = new RelayCommand(_ => ExportExcel(EquipmentSummaryView, "equipment_summary.xlsx", "EquipmentSummary"));
+        ExportEquipmentSummaryExcelCommand = new RelayCommand(_ => ExportExcel(EquipmentSummaryView, "equipment_summary.xlsx", "EquipmentSummary", EquipmentSummaryHiddenColumns));
         ExportRecipeListExcelCommand = new RelayCommand(_ => ExportExcel(RecipeListView, "recipe_list.xlsx", "RecipeList", RecipeListHiddenColumns));
         ExportRecipeDetailExcelCommand = new RelayCommand(_ => ExportExcel(RecipeDetailView, "recipe_detail.xlsx", "RecipeDetail", RecipeDetailHiddenColumns));
         CopySelectedRecipesCommand = new RelayCommand(_ => DataTableExportHelper.CopyToClipboard(CreateSelectedRecipesTable()));

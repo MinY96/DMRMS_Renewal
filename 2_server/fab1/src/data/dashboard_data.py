@@ -635,11 +635,6 @@ def cards(frame: pd.DataFrame, model: str, equipment: str) -> list[dict[str, str
             "description": "불일치 Recipe 수",
         },
         {
-            "title": "No Master",
-            "value": f"{int(latest['no_master_recipe_count']):,}",
-            "description": "Master Recipe가 없는 Recipe 수",
-        },
-        {
             "title": "집계 제외",
             "value": f"{int(latest['exclude_recipe_count']):,}",
             "description": "집계 제외된 Recipe 수",

@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Data;
 using System.IO;
@@ -17,8 +17,9 @@ public sealed class MasterManagementViewModel : BaseViewModel
     private readonly DmRmsApiService _api;
     private readonly IDialogService _dialog;
     private string _selectedFab = "fab1";
-    private string _statusMessage = "준비";
     private string _selectedMasterKey = string.Empty;
+    private string _selectedModel = string.Empty;
+    private long _filterRequestVersion;
     private DataView? _masterListView;
     private bool _isEditMode;
 
@@ -28,16 +29,15 @@ public sealed class MasterManagementViewModel : BaseViewModel
         _dialog = dialog;
         CanManageMaster = canManageMaster;
 
-        LoadFilterOptionsCommand = new AsyncRelayCommand(_ => LoadFilterOptionsAsync());
+        LoadFilterOptionsCommand = new AsyncRelayCommand(_ => LoadModelsAsync());
         SearchMasterListCommand = new AsyncRelayCommand(_ => SearchMasterListAsync());
-        ResetFiltersCommand = new RelayCommand(_ => ResetFilters());
         LoadMasterDetailCommand = new AsyncRelayCommand(row => LoadMasterDetailAsync(row));
         DeleteMasterCommand = new AsyncRelayCommand(row => DeleteMasterAsync(row), _ => CanManageMaster);
         BeginEditCommand = new RelayCommand(_ => SetEditMode(true), _ => CanManageMaster);
         CancelEditCommand = new RelayCommand(_ => SetEditMode(false));
         SaveMasterDetailCommand = new AsyncRelayCommand(_ => SaveMasterDetailAsync(), _ => CanManageMaster);
         SaveMasterJsonFileCommand = new RelayCommand(_ => SaveMasterJsonFile());
-        OpenNewMasterCommand = new AsyncRelayCommand(_ => OpenNewMasterAsync(), _ => CanManageMaster);
+        OpenNewMasterCommand = new AsyncRelayCommand(_ => OpenNewMasterAsync(), _ => CanCreateNewMaster);
         CopyMasterListCommand = new RelayCommand(_ => DataTableExportHelper.CopyToClipboard(MasterListView, MasterListHiddenColumns));
         ExportMasterListCsvCommand = new RelayCommand(_ => ExportCsv(MasterListView, "master_recipe_list.csv", MasterListHiddenColumns));
         ExportMasterListExcelCommand = new RelayCommand(_ => ExportExcel(MasterListView, "master_recipe_list.xlsx", "MasterList", MasterListHiddenColumns));
@@ -46,10 +46,10 @@ public sealed class MasterManagementViewModel : BaseViewModel
 
         MasterParameters.CollectionChanged += (_, _) => OnPropertyChanged(nameof(MasterDetailRowCount));
 
-        _ = LoadFilterOptionsAsync();
+        _ = LoadModelsAsync();
     }
 
-    public IReadOnlyList<string> FabOptions { get; } = new[] { "fab1", "fab2" };
+    public ObservableCollection<string> Models { get; } = new();
     public ObservableCollection<MasterFilterItem> Filters { get; } = new();
 
     /// <summary>
@@ -63,14 +63,24 @@ public sealed class MasterManagementViewModel : BaseViewModel
     public string SelectedFab
     {
         get => _selectedFab;
+        set => SetProperty(ref _selectedFab, value); // 사업장은 로그인 세션에 귀속됩니다.
+    }
+
+    public string SelectedModel
+    {
+        get => _selectedModel;
         set
         {
-            if (SetProperty(ref _selectedFab, value))
+            if (SetProperty(ref _selectedModel, value ?? string.Empty))
             {
+                OnPropertyChanged(nameof(CanCreateNewMaster));
+                ((AsyncRelayCommand)OpenNewMasterCommand).RaiseCanExecuteChanged();
                 _ = LoadFilterOptionsAsync();
             }
         }
     }
+
+    public bool CanCreateNewMaster => CanManageMaster && !string.IsNullOrWhiteSpace(SelectedModel);
 
     public string SelectedMasterKey
     {
@@ -108,7 +118,6 @@ public sealed class MasterManagementViewModel : BaseViewModel
 
     public ICommand LoadFilterOptionsCommand { get; }
     public ICommand SearchMasterListCommand { get; }
-    public ICommand ResetFiltersCommand { get; }
     public ICommand LoadMasterDetailCommand { get; }
     public ICommand DeleteMasterCommand { get; }
     public ICommand BeginEditCommand { get; }
@@ -122,44 +131,27 @@ public sealed class MasterManagementViewModel : BaseViewModel
     public ICommand CopyMasterDetailCommand { get; }
     public ICommand ExportMasterDetailExcelCommand { get; }
 
-    private async Task LoadFilterOptionsAsync()
+    /// <summary>선택 가능한 Model을 최초 한 번 조회하고, 새로고침 시 기존 선택을 보존합니다.</summary>
+    private async Task LoadModelsAsync()
     {
         try
         {
-            Filters.Clear();
-            ClearMasterListColumnFilters();
-            MasterListView = null;
-            MasterParameters.Clear();
-            SelectedMasterKey = string.Empty;
-            IsEditMode = false;
+            var previousModel = SelectedModel;
+            var response = await _api.GetMasterModelOptionsAsync();
+            var names = (response.Data ?? new List<string>())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
-            var response = await _api.GetMasterFilterOptionsAsync();
-            if (response.Data.ValueKind == JsonValueKind.Object)
-            {
-                var orderedProperties = response.Data.EnumerateObject()
-                    .OrderBy(property => GetFilterOrder(property.Name))
-                    .ThenBy(property => property.Name, StringComparer.OrdinalIgnoreCase);
+            Models.Clear();
+            foreach (var name in names)
+                Models.Add(name);
 
-                foreach (var property in orderedProperties)
-                {
-                    var item = new MasterFilterItem
-                    {
-                        Key = property.Name,
-                        DisplayName = ToDisplayName(property.Name),
-                        IsLikeFilter = property.Name.EndsWith("_like", StringComparison.OrdinalIgnoreCase)
-                    };
-
-                    if (property.Value.ValueKind == JsonValueKind.Array)
-                    {
-                        item.Options.Add(string.Empty);
-                        foreach (var option in property.Value.EnumerateArray())
-                            item.Options.Add(option.GetString() ?? string.Empty);
-                    }
-
-                    Filters.Add(item);
-                }
-            }
-
+            if (!names.Contains(previousModel, StringComparer.OrdinalIgnoreCase))
+                SelectedModel = string.Empty;
+            else
+                await LoadFilterOptionsAsync();
         }
         catch (Exception ex)
         {
@@ -167,11 +159,91 @@ public sealed class MasterManagementViewModel : BaseViewModel
         }
     }
 
-    private async Task SearchMasterListAsync()
+    /// <summary>
+    /// Model 변경 시 즉시 현재 화면을 초기화합니다. 오래된 비동기 응답은
+    /// 세대 번호를 검사해 폐기하므로 FAB2의 필터 중복도 발생하지 않습니다.
+    /// </summary>
+    private async Task LoadFilterOptionsAsync()
     {
+        var generation = System.Threading.Interlocked.Increment(ref _filterRequestVersion);
+        var model = SelectedModel;
+        Filters.Clear();
+        ClearMasterListColumnFilters();
+        MasterListView = null;
+        MasterParameters.Clear();
+        SelectedMasterKey = string.Empty;
+        IsEditMode = false;
+
+        if (string.IsNullOrWhiteSpace(model)) return;
+
         try
         {
-            var response = await _api.GetMasterListAsync(new MasterListRequest { Filters = BuildFilterRequest() });
+            var response = await _api.GetMasterFilterOptionsAsync(model);
+            if (generation != System.Threading.Interlocked.Read(ref _filterRequestVersion)
+                || !string.Equals(SelectedModel, model, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            if (response.Data.ValueKind != JsonValueKind.Object) return;
+
+            // _like 여부가 다른 동일 기준정보 및 서버의 중복 옵션을 정규화합니다.
+            var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var orderedProperties = response.Data.EnumerateObject()
+                .OrderBy(property => GetFilterOrder(property.Name))
+                .ThenBy(property => property.Name, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var property in orderedProperties)
+            {
+                var normalizedKey = property.Name.Replace("_like", string.Empty, StringComparison.OrdinalIgnoreCase);
+                if (string.Equals(normalizedKey, "model", StringComparison.OrdinalIgnoreCase)
+                    || !seenKeys.Add(normalizedKey))
+                    continue;
+
+                var item = new MasterFilterItem
+                {
+                    Key = property.Name,
+                    DisplayName = ToDisplayName(property.Name),
+                    IsLikeFilter = property.Name.EndsWith("_like", StringComparison.OrdinalIgnoreCase)
+                };
+
+                if (property.Value.ValueKind == JsonValueKind.Array)
+                {
+                    item.Options.Add(string.Empty);
+                    foreach (var option in property.Value.EnumerateArray()
+                        .Select(x => x.ValueKind == JsonValueKind.Null ? string.Empty : x.ToString())
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .Distinct(StringComparer.OrdinalIgnoreCase))
+                        item.Options.Add(option);
+                }
+                Filters.Add(item);
+            }
+        }
+        catch (Exception ex)
+        {
+            if (generation == System.Threading.Interlocked.Read(ref _filterRequestVersion))
+                _dialog.ShowError(ex.Message);
+        }
+    }
+
+    private async Task SearchMasterListAsync()
+    {
+        if (string.IsNullOrWhiteSpace(SelectedModel))
+        {
+            _dialog.ShowInfo("조회할 Model을 먼저 선택하세요.");
+            return;
+        }
+
+        var requestedModel = SelectedModel;
+        var requestFilters = BuildFilterRequest();
+        requestFilters["model"] = new Dictionary<string, string>
+        {
+            ["mode"] = "equals",
+            ["value"] = requestedModel
+        };
+        try
+        {
+            var response = await _api.GetMasterListAsync(new MasterListRequest { Filters = requestFilters });
+            if (!string.Equals(requestedModel, SelectedModel, StringComparison.OrdinalIgnoreCase))
+                return;
             var table = response.Data?.ToDataTable();
             MasterListView = table?.DefaultView;
             BuildMasterListColumnFilters(table);
@@ -349,15 +421,15 @@ public sealed class MasterManagementViewModel : BaseViewModel
 
     private async Task OpenNewMasterAsync()
     {
-        if (!CanManageMaster)
+        if (!CanCreateNewMaster)
         {
-            _dialog.ShowInfo("신규 Master 생성은 관리자 계정에서만 사용할 수 있습니다.");
+            _dialog.ShowInfo("관리자 권한과 Model 선택이 필요합니다.");
             return;
         }
 
         try
         {
-            var viewModel = new NewMasterViewModel(_api, _dialog, Filters);
+            var viewModel = new NewMasterViewModel(_api, _dialog, Filters, SelectedModel);
             await viewModel.InitializeAsync();
             var result = _dialog.ShowNewMasterDialog(viewModel);
             if (result == true || viewModel.Created)
@@ -387,39 +459,6 @@ public sealed class MasterManagementViewModel : BaseViewModel
     /// <param name="table">서버 응답을 변환한 Master 기준정보 DataTable입니다.</param>
     private void BuildMasterListColumnFilters(DataTable? table)
     {
-        //foreach (var filter in MasterListColumnFilters)
-        //    filter.PropertyChanged -= MasterListColumnFilter_PropertyChanged;
-        //MasterListColumnFilters.Clear();
-
-        //if (table == null) return;
-
-        //foreach (DataColumn column in table.Columns)
-        //{
-        //    if (string.Equals(column.ColumnName, "is_selected", StringComparison.OrdinalIgnoreCase))
-        //        continue;
-
-        //    var filter = new RecipeColumnFilter
-        //    {
-        //        ColumnName = column.ColumnName,
-        //        DisplayName = ToDisplayName(column.ColumnName),
-        //        IsComboBox = string.Equals(column.ColumnName, "matching", StringComparison.OrdinalIgnoreCase)
-        //    };
-
-        //    if (filter.IsComboBox)
-        //    {
-        //        filter.Options.Add(string.Empty);
-        //        foreach (var value in table.AsEnumerable()
-        //            .Select(row => row.IsNull(column) ? "(빈 값)" : Convert.ToString(row[column]) ?? string.Empty)
-        //            .Distinct(StringComparer.OrdinalIgnoreCase)
-        //            .OrderBy(value => value, StringComparer.OrdinalIgnoreCase))
-        //        {
-        //            filter.Options.Add(value);
-        //        }
-        //    }
-
-        //    filter.PropertyChanged += MasterListColumnFilter_PropertyChanged;
-        //    MasterListColumnFilters.Add(filter);
-        //}
         ClearMasterListColumnFilters();
         if (table == null) return;
 
@@ -537,15 +576,6 @@ public sealed class MasterManagementViewModel : BaseViewModel
             }
         }
         return result;
-    }
-
-    private void ResetFilters()
-    {
-        foreach (var filter in Filters)
-        {
-            filter.SelectedValue = string.Empty;
-            filter.TextValue = string.Empty;
-        }
     }
 
     private void SetEditMode(bool enabled)

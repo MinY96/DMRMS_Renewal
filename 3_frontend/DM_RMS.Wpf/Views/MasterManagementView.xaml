@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="DM_RMS.Wpf.Views.MasterManagementView"
+<UserControl x:Class="DM_RMS.Wpf.Views.MasterManagementView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:bh="clr-namespace:DM_RMS.Wpf.Behaviors"
@@ -106,8 +106,13 @@
                     <Border Style="{StaticResource BadgeStyle}" Margin="0,0,8,0">
                         <TextBlock Text="{Binding SelectedFab}" FontWeight="SemiBold" />
                     </Border>
+                    <TextBlock Text="Model" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold" />
+                    <ComboBox Width="155" Margin="0,0,8,0"
+                              ItemsSource="{Binding Models}"
+                              SelectedItem="{Binding SelectedModel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                              ToolTip="Model을 선택하면 기준정보 필터가 자동으로 초기화됩니다." />
                     <Button Content="필터 새로고침" Command="{Binding LoadFilterOptionsCommand}" />
-                    <Button Content="신규 Master 생성" IsEnabled="{Binding CanManageMaster}" ToolTip="관리자 계정에서만 사용할 수 있습니다." Style="{StaticResource SoftPrimaryButtonStyle}" Command="{Binding OpenNewMasterCommand}" />
+                    <Button Content="신규 Master 생성" IsEnabled="{Binding CanCreateNewMaster}" ToolTip="Model 선택 및 관리자 권한이 필요합니다." Style="{StaticResource SoftPrimaryButtonStyle}" Command="{Binding OpenNewMasterCommand}" />
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -119,7 +124,6 @@
                     <TextBlock Text="Fab별 기준정보에 맞춰 필터가 자동 구성됩니다." Style="{StaticResource MutedTextStyle}" />
                 </StackPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="16,0,0,0">
-                    <Button Content="초기화" Command="{Binding ResetFiltersCommand}" />
                     <Button Content="조회" Style="{StaticResource SoftPrimaryButtonStyle}" Command="{Binding SearchMasterListCommand}" />
                 </StackPanel>
                 <ItemsControl ItemsSource="{Binding Filters}" Margin="24,0,0,0">
