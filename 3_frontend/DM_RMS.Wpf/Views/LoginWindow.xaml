@@ -1,0 +1,102 @@
+﻿<Window x:Class="DM_RMS.Wpf.Views.LoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:bh="clr-namespace:DM_RMS.Wpf.Behaviors"
+        Title="DM RMS 로그인"
+        Height="480"
+        Width="430"
+        MinHeight="480"
+        MinWidth="430"
+        WindowStartupLocation="CenterScreen" Icon="/DM_RMS;component/Resources/DM_RMS.ico"
+        ResizeMode="NoResize">
+    <Grid Background="{StaticResource AppBackgroundBrush}">
+        <Border Style="{StaticResource CardStyle}"
+                Width="360"
+                VerticalAlignment="Center"
+                HorizontalAlignment="Center"
+                Padding="24">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Margin="0,0,0,18">
+                    <StackPanel HorizontalAlignment="Left">
+                        <TextBlock Text="DM RMS"
+                                   FontSize="28"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource PrimaryBrush}" />
+                        <TextBlock Text="Recipe Management System"
+                                   Style="{StaticResource MutedTextStyle}" />
+                    </StackPanel>
+
+                    <Button Content="신규 등록"
+                            Command="{Binding OpenRegisterCommand}"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top"
+                            Width="92"
+                            Height="30"
+                            Style="{StaticResource SmallButtonStyle}" />
+                </Grid>
+
+                <TextBlock Grid.Row="1" Text="사업장" FontWeight="SemiBold" Margin="0,0,0,5" />
+                <ComboBox Grid.Row="2"
+                          ItemsSource="{Binding FabOptions}"
+                          SelectedItem="{Binding SelectedFab}"
+                          Height="32"
+                          Margin="0,0,0,12" />
+
+                <TextBlock Grid.Row="3" Text="아이디" FontWeight="SemiBold" Margin="0,0,0,5" />
+                <TextBox Grid.Row="4"
+                         Text="{Binding UserId, UpdateSourceTrigger=PropertyChanged}"
+                         Height="32"
+                         Margin="0,0,0,12" />
+
+                <StackPanel Grid.Row="5">
+                    <TextBlock Text="패스워드" FontWeight="SemiBold" Margin="0,0,0,5" />
+                    <PasswordBox bh:PasswordBoxBindingBehavior.BoundPassword="{Binding BoundPassword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 Height="32"
+                                 Margin="0,0,0,18" />
+                </StackPanel>
+
+                <Grid Grid.Row="6">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Button Grid.Row="0"
+                            Grid.Column="0"
+                            Content="로그인"
+                            Command="{Binding LoginCommand}"
+                            IsDefault="True"
+                            Height="38"
+                            Style="{StaticResource PrimaryButtonStyle}" />
+                    <Button Grid.Row="0"
+                            Grid.Column="2"
+                            Content="취소"
+                            Command="{Binding CancelCommand}"
+                            Height="38" />
+
+                    <TextBlock Grid.Row="1"
+                               Grid.ColumnSpan="3"
+                               Text="{Binding StatusMessage}"
+                               Style="{StaticResource MutedTextStyle}"
+                               TextAlignment="Center"
+                               Margin="0,14,0,0" />
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

@@ -1,0 +1,24 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Runtime / secrets
+.env
+2_server/fab1/runtime/
+2_server/fab2/runtime/
+*.log
+
+# Visual Studio / .NET
+.vs/
+bin/
+obj/
+
+# OS / editor
+.DS_Store
+Thumbs.db

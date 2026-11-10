@@ -1,0 +1,91 @@
+equipments:
+  - equipment_name: IPS201
+    equipment_model: KLA2139
+    fab: FAB1
+    area: DM
+    enabled: false
+    img_save_mode: false
+    connection:
+      type: ftp
+      encoding: cp949
+      port: 21
+      host_env: IPS201_FTP_HOST
+      username_env: IPS201_FTP_USERNAME
+      password_env: IPS201_FTP_PASSWORD
+      remote_directory: d:/KT1339/Usr/Ins8
+      timeout_seconds: 60
+  - equipment_name: IPS202
+    equipment_model: KLA2139
+    fab: FAB1
+    area: DM
+    enabled: true
+    img_save_mode: false
+    connection:
+      type: ftp
+      encoding: cp949
+      port: 21
+      host_env: IPS202_FTP_HOST
+      username_env: IPS202_FTP_USERNAME
+      password_env: IPS202_FTP_PASSWORD
+      remote_directory: d:/KT1325/Usr/Ins8
+      timeout_seconds: 60
+  - equipment_name: IPS203
+    equipment_model: KLA2139
+    fab: FAB1
+    area: DM
+    enabled: true
+    img_save_mode: false
+    connection:
+      type: ftp
+      encoding: cp949
+      port: 21
+      host_env: IPS203_FTP_HOST
+      username_env: IPS203_FTP_USERNAME
+      password_env: IPS203_FTP_PASSWORD
+      remote_directory: d:/KT1333/Usr/Ins8
+      timeout_seconds: 60
+  - equipment_name: IPS204
+    equipment_model: KLA2360
+    fab: FAB1
+    area: DM
+    enabled: true
+    img_save_mode: false
+    connection:
+      type: ftp
+      encoding: cp949
+      port: 21
+      host_env: IPS204_FTP_HOST
+      username_env: IPS204_FTP_USERNAME
+      password_env: IPS204_FTP_PASSWORD
+      remote_directory: e:/Data84/KTInsptr3167/Usr/Recipes200
+      timeout_seconds: 60
+  - equipment_name: IPS205
+    equipment_model: KLA2365
+    fab: FAB1
+    area: DM
+    enabled: true
+    img_save_mode: false
+    connection:
+      type: ftp
+      encoding: cp949
+      port: 21
+      host_env: IPS205_FTP_HOST
+      username_env: IPS205_FTP_USERNAME
+      password_env: IPS205_FTP_PASSWORD
+      remote_directory: e:/DATA104/KTInsptr3195/Usr/Recipes200
+      timeout_seconds: 60
+  - equipment_name: ILS203
+    equipment_model: PUMA
+    fab: FAB1
+    area: DM
+    enabled: true
+    img_save_mode: false
+    connection:
+      type: ftp
+      encoding: cp949
+      port: 21
+      host_env: ILS203_FTP_HOST
+      username_env: ILS203_FTP_USERNAME
+      password_env: ILS203_FTP_PASSWORD
+      remote_directory: e:/DATA91/KTInsptr1040/Usr/Recipes200
+      timeout_seconds: 60

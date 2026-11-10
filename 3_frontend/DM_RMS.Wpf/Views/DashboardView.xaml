@@ -1,0 +1,201 @@
+﻿<UserControl x:Class="DM_RMS.Wpf.Views.DashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+             xmlns:bh="clr-namespace:DM_RMS.Wpf.Behaviors">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="4">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="360"/>
+                <RowDefinition Height="360"/>
+                <RowDefinition Height="360"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Style="{StaticResource PageHeaderCardStyle}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Recipe Matching 현황" Style="{StaticResource PageTitleTextStyle}"/>
+                        <TextBlock Text="최근 Matching 변화, 파일 업데이트 이력, 장비별 현황을 통합 조회합니다."
+                                   Style="{StaticResource MutedTextStyle}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                            <TextBlock Text="Model" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <ComboBox Width="180" VerticalContentAlignment="Center"
+                                Margin="0,0,20,0"
+                                ItemsSource="{Binding ModelOptions}"
+                                SelectedItem="{Binding SelectedModel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                IsEditable="False"
+                                IsTextSearchEnabled="True"/>
+                            <TextBlock Text="Equip" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <ComboBox Width="190" VerticalContentAlignment="Center"
+                                ItemsSource="{Binding EquipmentOptions}"
+                                SelectedItem="{Binding SelectedEquipment, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                IsEditable="False"
+                                IsTextSearchEnabled="True"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                        <Button Content="새로고침" Command="{Binding RefreshCommand}"/>
+                        <Button Content="최신 Matching 상세 다운로드"
+                                Style="{StaticResource SoftPrimaryButtonStyle}"
+                                Command="{Binding DownloadDetailCommand}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <ItemsControl Grid.Row="1" ItemsSource="{Binding Cards}" Margin="0,4">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="6"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource CardStyle}" Margin="4">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Title}" Style="{StaticResource MutedTextStyle}"/>
+                                <TextBlock Text="{Binding Value}" FontSize="25" FontWeight="Bold" Margin="0,8,0,4"/>
+                                <TextBlock Text="{Binding Description}" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1.4*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Style="{StaticResource CardStyle}" Margin="4">
+                    <DockPanel>
+                        <TextBlock 
+                            DockPanel.Dock="Top" 
+                            Text="최근 7일 Recipe Matching History" 
+                            Style="{StaticResource SectionTitleTextStyle}"/>
+                        <wv2:WebView2 
+                            bh:WebView2HtmlBehavior.Html="{Binding MatchingRateHtml}"/>
+                    </DockPanel>
+                </Border>
+                <Border Grid.Column="1" Style="{StaticResource CardStyle}" Margin="4">
+                    <DockPanel>
+                        <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Recipe Matching 정보" Style="{StaticResource SectionTitleTextStyle}"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <Button Style="{StaticResource IconButtonStyle}" Command="{Binding CopyMatchingRateCommand}" ToolTip="클립보드 복사"><Viewbox Width="15" Height="15"><Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Data="M6,2 H14 A2,2 0 0 1 16,4 V14 A2,2 0 0 1 14,16 H6 A2,2 0 0 1 4,14 V4 A2,2 0 0 1 6,2 M3,6 H2 A2,2 0 0 0 0,8 V18 A2,2 0 0 0 2,20 H10 A2,2 0 0 0 12,18 V17 H4 A1,1 0 0 1 3,16 Z"/></Viewbox></Button>
+                                <Button Style="{StaticResource IconButtonStyle}" Command="{Binding ExportMatchingRateCommand}" ToolTip="Excel 저장"><Viewbox Width="16" Height="16"><Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Data="M3,2 H13 A2,2 0 0 1 15,4 V7 H13 V4 H3 V16 H8 V18 H3 A2,2 0 0 1 1,16 V4 A2,2 0 0 1 3,2 M10,8 H12 V11 H15 V13 H12 V16 H10 V13 H7 V11 H10 Z"/></Viewbox></Button>
+                            </StackPanel>
+                        </Grid>
+                        <DataGrid ItemsSource="{Binding MatchingRateView}"
+                                  AutoGenerateColumns="True"
+                                  IsReadOnly="True"
+                                  EnableRowVirtualization="True"
+                                  EnableColumnVirtualization="True"
+                                  bh:DataGridTextColumnFormatBehavior.CenterHeaders="True"/>
+                    </DockPanel>
+                </Border>
+            </Grid>
+
+            <Grid Grid.Row="3">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="1.4*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Style="{StaticResource CardStyle}" Margin="4">
+                    <DockPanel>
+                        <TextBlock
+                            DockPanel.Dock="Top"
+                            Text="최근 7일 장비 업데이트 History"
+                            Style="{StaticResource SectionTitleTextStyle}"/>
+                        <wv2:WebView2 
+                            bh:WebView2HtmlBehavior.Html="{Binding UpdateHistoryHtml}"/>
+                    </DockPanel>
+                </Border>
+                <Border Grid.Column="1" Style="{StaticResource CardStyle}" Margin="4">
+                    <DockPanel>
+                        <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="업데이트 정보" Style="{StaticResource SectionTitleTextStyle}"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <Button Style="{StaticResource IconButtonStyle}" Command="{Binding CopyUpdateHistoryCommand}" ToolTip="클립보드 복사"><Viewbox Width="15" Height="15"><Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Data="M6,2 H14 A2,2 0 0 1 16,4 V14 A2,2 0 0 1 14,16 H6 A2,2 0 0 1 4,14 V4 A2,2 0 0 1 6,2 M3,6 H2 A2,2 0 0 0 0,8 V18 A2,2 0 0 0 2,20 H10 A2,2 0 0 0 12,18 V17 H4 A1,1 0 0 1 3,16 Z"/></Viewbox></Button>
+                                <Button Style="{StaticResource IconButtonStyle}" Command="{Binding ExportUpdateHistoryCommand}" ToolTip="Excel 저장"><Viewbox Width="16" Height="16"><Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Data="M3,2 H13 A2,2 0 0 1 15,4 V7 H13 V4 H3 V16 H8 V18 H3 A2,2 0 0 1 1,16 V4 A2,2 0 0 1 3,2 M10,8 H12 V11 H15 V13 H12 V16 H10 V13 H7 V11 H10 Z"/></Viewbox></Button>
+                            </StackPanel>
+                        </Grid>
+                        <DataGrid ItemsSource="{Binding UpdateHistoryView}" AutoGenerateColumns="True" IsReadOnly="True"
+                                  bh:DataGridTextColumnFormatBehavior.CenterHeaders="True"/>
+                    </DockPanel>
+                </Border>
+            </Grid>
+
+            <Grid Grid.Row="4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Style="{StaticResource CardStyle}" Margin="4">
+                    <DockPanel>
+                        <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="집계 제외 현황" Style="{StaticResource SectionTitleTextStyle}"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <Button Style="{StaticResource IconButtonStyle}" Command="{Binding CopyExcludeStatusCommand}" ToolTip="클립보드 복사">
+                                    <Viewbox Width="15" Height="15">
+                                        <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Data="M6,2 H14 A2,2 0 0 1 16,4 V14 A2,2 0 0 1 14,16 H6 A2,2 0 0 1 4,14 V4 A2,2 0 0 1 6,2 M3,6 H2 A2,2 0 0 0 0,8 V18 A2,2 0 0 0 2,20 H10 A2,2 0 0 0 12,18 V17 H4 A1,1 0 0 1 3,16 Z"/>
+                                    </Viewbox>
+                                </Button>
+                                <Button Style="{StaticResource IconButtonStyle}" Command="{Binding ExportExcludeStatusCommand}" ToolTip="Excel 저장">
+                                    <Viewbox Width="16" Height="16">
+                                        <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Data="M3,2 H13 A2,2 0 0 1 15,4 V7 H13 V4 H3 V16 H8 V18 H3 A2,2 0 0 1 1,16 V4 A2,2 0 0 1 3,2 M10,8 H12 V11 H15 V13 H12 V16 H10 V13 H7 V11 H10 Z"/>
+                                    </Viewbox>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.5*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <wv2:WebView2 Grid.Column="0" bh:WebView2HtmlBehavior.Html="{Binding ExcludeStatusHtml}"/>
+                            <DataGrid Grid.Column="1" ItemsSource="{Binding ExcludeStatusView}" AutoGenerateColumns="True" IsReadOnly="True"
+                                      bh:DataGridTextColumnFormatBehavior.CenterHeaders="True"/>
+                        </Grid>
+                    </DockPanel>
+                </Border>
+                <Border Grid.Column="1" Style="{StaticResource CardStyle}" Margin="4">
+                    <DockPanel>
+                        <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Non Matching Parameter 현황" Style="{StaticResource SectionTitleTextStyle}"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <Button Style="{StaticResource IconButtonStyle}" Command="{Binding CopyNonMatchingParaCommand}" ToolTip="클립보드 복사">
+                                    <Viewbox Width="15" Height="15">
+                                        <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Data="M6,2 H14 A2,2 0 0 1 16,4 V14 A2,2 0 0 1 14,16 H6 A2,2 0 0 1 4,14 V4 A2,2 0 0 1 6,2 M3,6 H2 A2,2 0 0 0 0,8 V18 A2,2 0 0 0 2,20 H10 A2,2 0 0 0 12,18 V17 H4 A1,1 0 0 1 3,16 Z"/>
+                                    </Viewbox>
+                                </Button>
+                                <Button Style="{StaticResource IconButtonStyle}" Command="{Binding ExportNonMatchingParaCommand}" ToolTip="Excel 저장">
+                                    <Viewbox Width="16" Height="16">
+                                        <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Data="M3,2 H13 A2,2 0 0 1 15,4 V7 H13 V4 H3 V16 H8 V18 H3 A2,2 0 0 1 1,16 V4 A2,2 0 0 1 3,2 M10,8 H12 V11 H15 V13 H12 V16 H10 V13 H7 V11 H10 Z"/>
+                                    </Viewbox>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.5*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <wv2:WebView2 Grid.Column="0" bh:WebView2HtmlBehavior.Html="{Binding NonMatchingParameterHtml}"/>
+                            <DataGrid Grid.Column="1" ItemsSource="{Binding NonMatchingParameterView}" AutoGenerateColumns="True" IsReadOnly="True"
+                                      bh:DataGridTextColumnFormatBehavior.CenterHeaders="True"/>
+                        </Grid>
+                    </DockPanel>
+                </Border>
+            </Grid>
+        </Grid>
+    </ScrollViewer>
+</UserControl>
