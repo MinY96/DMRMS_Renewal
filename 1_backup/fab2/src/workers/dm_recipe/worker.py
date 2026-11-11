@@ -8,10 +8,21 @@ import pandas as pd
 from src.config.config import PARSE_BATCH_SIZE
 from src.databases import PostgresCRUD
 from src.domain.entities.equipment import Equipment, create_equipment
-from src.preprocessing.parsers import KLA2139Parser, KLA2365Parser, PumaParser, Parser
+from src.preprocessing.parsers import (
+    KLA2139Parser,
+    KLA2360Parser,
+    KLA2365Parser,
+    PumaParser,
+    Parser,
+)
 
 log = logging.getLogger(__name__)
-PARSERS = {"KLA2139": KLA2139Parser, "KLA2360": KLA2365Parser, "KLA2365": KLA2365Parser, "PUMA": PumaParser}
+PARSERS = {
+    "KLA2139": KLA2139Parser,
+    "KLA2360": KLA2360Parser,
+    "KLA2365": KLA2365Parser,
+    "PUMA": PumaParser,
+}
 PARA_COLS = ["recipe_key", "para_nm", "para_value", "matching"]
 
 

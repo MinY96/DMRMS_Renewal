@@ -60,3 +60,20 @@ class Parser(ABC):
         else:
             vals = []
         return (vals + [None] * 4)[:4]
+
+    @staticmethod
+    def three(values: Any) -> list:
+        """문자열로 기록된 채널별 수치 3개를 안전하게 추출한다.
+
+        Args:
+            values: 처리에 필요한 입력값.
+
+        Returns:
+            list: 처리 결과를 반환한다."""
+        if isinstance(values, str):
+            vals = values.split()
+        elif isinstance(values, (list, tuple)):
+            vals = list(values)
+        else:
+            vals = []
+        return (vals + [None] * 3)[:3]
