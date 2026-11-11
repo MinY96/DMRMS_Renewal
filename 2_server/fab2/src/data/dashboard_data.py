@@ -348,7 +348,7 @@ def matching_chart_html(frame: pd.DataFrame, model: str, equipment: str) -> str:
         figure.add_trace(
             go.Scatter(
                 x=labels,
-                y=frame["matching_rate"],
+                y=frame["matching_rate"] * 100,
                 name="Matching Rate",
                 mode="lines+markers+text",
                 line={"color": "#2F6BFF", "width": 3},
@@ -357,7 +357,7 @@ def matching_chart_html(frame: pd.DataFrame, model: str, equipment: str) -> str:
                     "color": "white",
                     "line": {"color": "#2F6BFF", "width": 2},
                 },
-                text=[f"{value:.2f}%" for value in frame["matching_rate"]],
+                text=[f"{value*100:.2f}%" for value in frame["matching_rate"]],
                 textposition="top center",
                 cliponaxis=False,
                 hovertemplate=(
@@ -382,10 +382,6 @@ def matching_chart_html(frame: pd.DataFrame, model: str, equipment: str) -> str:
         )
         figure.update_yaxes(
             title_text="Matching Rate (%)",
-            range=[
-                max(0, min(90, rate_min - 0.5)),
-                min(100.5, max(100, rate_max + 0.3)),
-            ],
             ticksuffix="%",
             showgrid=False,
             zeroline=False,
