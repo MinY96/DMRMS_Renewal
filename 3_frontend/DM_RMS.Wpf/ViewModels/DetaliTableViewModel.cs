@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Data;
 using System.Windows.Input;
@@ -13,6 +13,10 @@ public sealed class DetaliTableViewModel : BaseViewModel
 {
     private readonly DmRmsApiService _api;
     private readonly IDialogService _dialog;
+    private readonly string _searchData;
+    private string _selectedModel = string.Empty;
+    private long _requestVersion;
+    private bool _modelsLoaded;
     private DataView? _detailView;
     private Dictionary<string, ColumnVisualizationInfo> _columnMetadata = new(StringComparer.OrdinalIgnoreCase);
     private bool _isLoading;
@@ -23,13 +27,75 @@ public sealed class DetaliTableViewModel : BaseViewModel
     {
         _api = api;
         _dialog = dialog;
-        RefreshCommand = new AsyncRelayCommand(_ => LoadAsync(searchData));
+        _searchData = searchData;
+        RefreshCommand = new AsyncRelayCommand(_ => ActivateAsync());
         CopyCommand = new RelayCommand(_ => DataTableExportHelper.CopyToClipboard(DetailView, GetHiddenColumns(searchData)));
         ExportExcelCommand = new RelayCommand(_ => ExportExcel(searchData));
-        _ = LoadAsync(searchData);
+        // 사용자가 해당 탭을 열 때에만 조회하여 불필요한 초기 API 요청을 방지합니다.
     }
 
     public ObservableCollection<RecipeColumnFilter> ColumnFilters { get; } = new();
+    public ObservableCollection<string> Models { get; } = new();
+
+    /// <summary>No Master 탭에서만 사용하는 Model입니다.</summary>
+    public string SelectedModel
+    {
+        get => _selectedModel;
+        set
+        {
+            if (!SetProperty(ref _selectedModel, value ?? string.Empty)) return;
+            // 이전 Model 조회가 늦게 응답해도 현재 테이블을 덮어쓰지 않도록 무효화합니다.
+            System.Threading.Interlocked.Increment(ref _requestVersion);
+            DetailView = null;
+            RowCount = 0;
+            IsLoading = false;
+            ColumnMetadata = new Dictionary<string, ColumnVisualizationInfo>(StringComparer.OrdinalIgnoreCase);
+            ClearColumnFilters();
+            if (_searchData == "no_master" && !string.IsNullOrWhiteSpace(_selectedModel))
+                _ = LoadAsync();
+        }
+    }
+
+    /// <summary>탭을 선택할 때 최신 내용을 다시 조회합니다.</summary>
+    public async Task ActivateAsync()
+    {
+        if (_searchData == "no_master")
+        {
+            if (!_modelsLoaded)
+                await LoadModelsAsync();
+            if (string.IsNullOrWhiteSpace(SelectedModel)) return;
+        }
+        await LoadAsync();
+    }
+
+    private async Task LoadModelsAsync()
+    {
+        try
+        {
+            var response = await _api.GetNoMasterModelOptionsAsync();
+            var options = (response.Data ?? new List<string>())
+                .Where(model => !string.IsNullOrWhiteSpace(model))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(model => model, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            Models.Clear();
+            foreach (var model in options) Models.Add(model);
+            _modelsLoaded = true;
+            if (!options.Contains(SelectedModel, StringComparer.OrdinalIgnoreCase))
+                SelectedModel = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _dialog.ShowError($"No Master Model 목록 조회 실패: {ex.Message}");
+        }
+    }
+
+    private void ClearColumnFilters()
+    {
+        foreach (var filter in ColumnFilters)
+            filter.PropertyChanged -= OnFilterChanged;
+        ColumnFilters.Clear();
+    }
 
     public DataView? DetailView
     {
@@ -59,26 +125,35 @@ public sealed class DetaliTableViewModel : BaseViewModel
     public ICommand CopyCommand { get; }
     public ICommand ExportExcelCommand { get; }
 
-    public async Task LoadAsync(string searchData)
+    public async Task LoadAsync(string? searchData = null)
     {
+        var kind = searchData ?? _searchData;
+        if (kind == "no_master" && string.IsNullOrWhiteSpace(SelectedModel))
+            return;
+
+        var requestVersion = System.Threading.Interlocked.Increment(ref _requestVersion);
         try
         {
             IsLoading = true;
-            ApiResponse<CusomDetailTableResponse> response = null;
-            switch (searchData)
+            ApiResponse<CusomDetailTableResponse>? response = null;
+            switch (kind)
             {
                 case "non_matching":
                     response = await _api.GetNonMatchingDetailAsync();
                     break;
                 case "no_master":
-                    response = await _api.GetNoMasterDetailAsync();
+                    response = await _api.GetNoMasterDetailAsync(SelectedModel);
                     break;
                 case "exclude":
                     response = await _api.GetExcludeDetailAsync();
                     break;
             }
 
-            var data = response.Data;
+            // 모델 변경 등으로 무효화된 응답은 UI에 반영하지 않습니다.
+            if (requestVersion != System.Threading.Interlocked.Read(ref _requestVersion))
+                return;
+
+            var data = response?.Data;
             if (data is null)
             {
                 DetailView = null;
@@ -87,7 +162,7 @@ public sealed class DetaliTableViewModel : BaseViewModel
             }
 
             var table = data.Table.ToDataTable();
-            _isNonMatchingTree = searchData == "non_matching";
+            _isNonMatchingTree = kind == "non_matching";
             if (_isNonMatchingTree) table = BuildNonMatchingTreeTable(table, data.ColumnMetadata);
             table.CaseSensitive = false;
             DetailView = table.DefaultView;
@@ -102,7 +177,8 @@ public sealed class DetaliTableViewModel : BaseViewModel
         }
         finally
         {
-            IsLoading = false;
+            if (requestVersion == System.Threading.Interlocked.Read(ref _requestVersion))
+                IsLoading = false;
         }
     }
 
@@ -166,9 +242,7 @@ public sealed class DetaliTableViewModel : BaseViewModel
 
     private void BuildFilters(IEnumerable<DataFrameColumn> columns)
     {
-        foreach (var existing in ColumnFilters)
-            existing.PropertyChanged -= OnFilterChanged;
-        ColumnFilters.Clear();
+        ClearColumnFilters();
 
         foreach (var column in columns)
         {

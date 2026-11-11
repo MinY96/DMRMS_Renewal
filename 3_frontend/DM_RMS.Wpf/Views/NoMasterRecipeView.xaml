@@ -24,6 +24,11 @@
                 </StackPanel>
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="Model" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,8,0" />
+                <ComboBox Width="155" Margin="0,0,12,0"
+                          ItemsSource="{Binding Models}"
+                          SelectedItem="{Binding SelectedModel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                          ToolTip="Model 선택 시 No Master Recipe를 자동으로 조회합니다." />
                 <Button Content="새로고침" Command="{Binding RefreshCommand}" Margin="0,0,8,0"/>
                 <Button Style="{StaticResource IconButtonStyle}" Command="{Binding CopyCommand}" ToolTip="클립보드 복사">
                     <Viewbox Width="15" Height="15"><Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Data="M6,2 H14 A2,2 0 0 1 16,4 V14 A2,2 0 0 1 14,16 H6 A2,2 0 0 1 4,14 V4 A2,2 0 0 1 6,2 M3,6 H2 A2,2 0 0 0 0,8 V18 A2,2 0 0 0 2,20 H10 A2,2 0 0 0 12,18 V17 H4 A1,1 0 0 1 3,16 Z"/></Viewbox>

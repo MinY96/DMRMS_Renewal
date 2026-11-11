@@ -1,4 +1,4 @@
-﻿namespace DM_RMS.Wpf.Behaviors;
+namespace DM_RMS.Wpf.Behaviors;
 
 public static class DataGridTextColumnFormatBehavior
 {
@@ -62,7 +62,7 @@ public static class DataGridTextColumnFormatBehavior
 
         string? format = e.PropertyName switch
         {
-            "matching_rate" => "{0:N2}%",
+            "matching_rate" => "{0:P2}",
             "recipe_count" or "matching_recipe_count" or "non_matching_recipe_count" or
             "exclude_recipe_count" or "no_master_recipe_count" or "matching_count" or
             "non_matching_count" or "new_recipe_count" or "update_recipe_count" or

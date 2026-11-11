@@ -152,8 +152,12 @@ public sealed class DmRmsApiService
         return $"{path}?{string.Join("&", queryParameters)}";
     }
 
-    public Task<ApiResponse<CusomDetailTableResponse>> GetNoMasterDetailAsync()
-        => _api.GetAsync<CusomDetailTableResponse>("/api/no_master_detail/data");
+    public Task<ApiResponse<List<string>>> GetNoMasterModelOptionsAsync()
+        => _api.GetAsync<List<string>>("/api/no_master_detail/models");
+
+    public Task<ApiResponse<CusomDetailTableResponse>> GetNoMasterDetailAsync(string model)
+        => _api.GetAsync<CusomDetailTableResponse>(
+            $"/api/no_master_detail/data?model={Uri.EscapeDataString(model)}");
 
     public Task<ApiResponse<CusomDetailTableResponse>> GetNonMatchingDetailAsync()
     => _api.GetAsync<CusomDetailTableResponse>("/api/non_matching_detail/data");

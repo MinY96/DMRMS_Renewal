@@ -79,11 +79,17 @@ public sealed class NewMasterViewModel : BaseViewModel
             Parameters.Clear();
             foreach (var dto in templateResponse.Data?.Parameters ?? new List<MasterParameterDto>())
             {
+                var option = ParameterOptions.FirstOrDefault(p =>
+                    string.Equals(p.ParameterName, dto.ParameterName, StringComparison.OrdinalIgnoreCase));
+                if (option is not null && dto.AllowedValues.Count == 0)
+                    dto.AllowedValues = option.AllowedValues.ToList();
                 var item = MasterParameterItem.FromDto(dto, isEditMode: true);
                 Parameters.Add(item);
             }
 
-            StatusMessage = "신규 Master 생성 준비 완료";
+            StatusMessage = Parameters.Count == 0
+                ? "기존 Master 템플릿이 없습니다. 우측 Parameter 목록에서 필요한 항목을 추가하세요."
+                : "신규 Master 생성 준비 완료";
         }
         catch (Exception ex)
         {

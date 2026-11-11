@@ -1,4 +1,4 @@
-﻿using DM_RMS.Wpf.Models;
+using DM_RMS.Wpf.Models;
 using DM_RMS.Wpf.Services;
 
 namespace DM_RMS.Wpf.ViewModels;
@@ -7,6 +7,7 @@ public sealed class MainViewModel : BaseViewModel
 {
     private readonly DmRmsApiService _usageApi;
     private string _selectedFab;
+    private int _selectedTabIndex;
 
     public MainViewModel(UserSession session)
     {
@@ -28,6 +29,22 @@ public sealed class MainViewModel : BaseViewModel
         Recipe.SelectedFab = SelectedFab;
         Master.SelectedFab = SelectedFab;
         Dashboard.SelectedFab = SelectedFab;        
+    }
+
+    /// <summary>탭 이동 시 실제 조회 시점에 맞춰 테이블 데이터를 갱신합니다.</summary>
+    public int SelectedTabIndex
+    {
+        get => _selectedTabIndex;
+        set
+        {
+            if (!SetProperty(ref _selectedTabIndex, value)) return;
+            switch (value)
+            {
+                case 1: _ = NonMatchingRecipe.ActivateAsync(); break;
+                case 2: _ = NoMasterRecipe.ActivateAsync(); break;
+                case 3: _ = ExcludeRecipe.ActivateAsync(); break;
+            }
+        }
     }
 
     public UserSession Session { get; }

@@ -29,40 +29,42 @@ REQUIRED_CRITERIA_PUMA = (
 
 
 def master_filter_options(model: str) -> dict:
-    """Master Recipe 기준정보 필터 선택지를 조회한다.
-    Args:
-        model: 선택한 Model (str).
-
-    Returns:
-        dict: 처리 결과.
-    """
-    table_name = "dm_master_recipe_info"
-    options = {
-        "tech_prod": PostgresCRUD.select_query_by_list(
-            f"SELECT DISTINCT tech_prod FROM {table_name} WHERE model=%s ORDER BY tech_prod",
-            (model,),
-        ),
-        "tech": PostgresCRUD.select_query_by_list(
-            f"SELECT DISTINCT tech FROM {table_name} WHERE model=%s ORDER BY tech",
-            (model,),
-        ),
-        "prod_group": PostgresCRUD.select_query_by_list(
-            f"SELECT DISTINCT prod_group FROM {table_name} WHERE model=%s ORDER BY prod_group",
-            (model,),
-        ),
+    """파싱 Recipe 및 기존 Master에서 선택 Model의 기준정보 선택지를 만든다."""
+    options: dict[str, object] = {
+        "tech_prod": [],
+        "tech": [],
+        "prod_group": [],
         "level_like": "",
         "layer_like": "",
     }
-    if model == "PUMA":
+    if model != "PUMA":
+        options["mode"] = []
+    if not model:
         return options
-    options.update(
-        {
-            "mode": PostgresCRUD.select_query_by_list(
-                f"SELECT DISTINCT mode FROM {table_name} WHERE model=%s ORDER BY mode",
-                (model,),
-            )
-        }
+
+    # Master가 없는 신규 Model도 화면에 선택지를 표시할 수 있어야 합니다.
+    frame = PostgresCRUD.select_query(
+        """
+        SELECT tech_prod, tech, prod_group, level, layer, mode
+        FROM dm_recipe_info
+        WHERE model=%s AND is_remove=false
+        UNION
+        SELECT tech_prod, tech, prod_group, level, layer, mode
+        FROM dm_master_recipe_info
+        WHERE model=%s
+        """,
+        (model, model),
     )
+    for column in ("tech_prod", "tech", "prod_group", "mode"):
+        if column not in options:
+            continue
+        if frame.empty:
+            continue
+        series = frame[column]
+        unique = set(series.dropna().astype(str).str.strip()) - {""}
+        if series.isna().any():
+            unique.add("NULL")
+        options[column] = sorted(unique, key=str.casefold)
     return options
 
 
@@ -144,41 +146,74 @@ def master_detail(master_key: str) -> dict:
 
 
 def parameter_options(model: str) -> list[dict]:
-    """신규 Master 생성에 사용할 Parameter 메타정보를 조회한다.
-    Args:
-        model: 선택한 Model명 (str).
+    """파싱 Recipe를 기준으로 Parameter 명칭, 타입, 문자열 고유값을 일괄 조회한다.
 
-    Returns:
-        list[dict]: 처리 결과.
+    Master가 이미 존재하는 Model은 Master의 Parameter도 함께 포함합니다.
+    문자열 고유값은 N+1 SQL이 아닌 단일 배치 조회로 읽습니다.
     """
-    parameters = PostgresCRUD.select_query(
+    if not model:
+        return []
+    frame = PostgresCRUD.select_query(
         """
-        SELECT DISTINCT p.para_nm AS parameter_name,
-            COALESCE(t.para_type, 'STRING') AS control_type
-        FROM dm_master_recipe_para p
-        LEFT JOIN dm_para_type t ON p.para_nm=t.para_nm
-        WHERE p.para_nm<>'mode'
-            AND p.master_key LIKE %s
-        ORDER BY p.para_nm
+        WITH names AS (
+            SELECT p.para_nm
+            FROM dm_recipe_para p
+            JOIN dm_recipe_info i ON i.recipe_key=p.recipe_key
+            WHERE i.model=%s AND i.is_remove=false AND p.para_nm<>'mode'
+            UNION
+            SELECT p.para_nm
+            FROM dm_master_recipe_para p
+            JOIN dm_master_recipe_info i ON i.master_key=p.master_key
+            WHERE i.model=%s AND p.para_nm<>'mode'
+        )
+        SELECT n.para_nm AS parameter_name,
+               COALESCE(MAX(t.para_type), 'STRING') AS control_type
+        FROM names n
+        LEFT JOIN dm_para_type t ON t.para_nm=n.para_nm
+        GROUP BY n.para_nm
+        ORDER BY n.para_nm
         """,
-        (f"{model}%",),
-    ).to_dict(orient="records")
-    for parameter in parameters:
-        parameter["allowed_values"] = []
-        if str(parameter["control_type"]).upper() == "STRING":
-            parameter["allowed_values"] = PostgresCRUD.select_query_by_list(
-                """
-                SELECT DISTINCT para_value 
-                FROM dm_master_recipe_para 
-                WHERE para_nm=%s 
-                    AND master_key LIKE %s
-                ORDER BY para_value""",
-                (
-                    parameter["parameter_name"],
-                    f"{model}%",
-                ),
-            )
-    return parameters
+        (model, model),
+    )
+    if frame.empty:
+        return []
+    result = frame.to_dict(orient="records")
+    for item in result:
+        item["control_type"] = str(item.get("control_type") or "STRING").upper()
+        item["allowed_values"] = []
+    string_names = [item["parameter_name"] for item in result
+                    if item["control_type"] == "STRING"]
+    if not string_names:
+        return result
+
+    # 하나의 모델에 대한 모든 문자열 파라미터 고유값을 한 번에 조회합니다.
+    values = PostgresCRUD.select_query(
+        """
+        SELECT DISTINCT para_nm AS parameter_name, BTRIM(para_value) AS para_value
+        FROM (
+            SELECT p.para_nm, p.para_value
+            FROM dm_recipe_para p
+            JOIN dm_recipe_info i ON i.recipe_key=p.recipe_key
+            WHERE i.model=%s AND i.is_remove=false AND p.para_nm = ANY(%s)
+            UNION
+            SELECT p.para_nm, p.para_value
+            FROM dm_master_recipe_para p
+            JOIN dm_master_recipe_info i ON i.master_key=p.master_key
+            WHERE i.model=%s AND p.para_nm = ANY(%s)
+        ) value_source
+        WHERE para_value IS NOT NULL AND BTRIM(para_value) <> ''
+        ORDER BY parameter_name, para_value
+        """,
+        (model, string_names, model, string_names),
+    )
+    by_name: dict[str, list[str]] = {name: [] for name in string_names}
+    for row in values.to_dict(orient="records"):
+        name = row["parameter_name"]
+        if name in by_name:
+            by_name[name].append(row["para_value"])
+    for item in result:
+        item["allowed_values"] = by_name.get(item["parameter_name"], [])
+    return result
 
 
 def default_new_master_template(model: str) -> dict:

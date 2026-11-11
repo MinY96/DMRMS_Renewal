@@ -25,13 +25,15 @@ def _selected_model() -> str:
 @no_master_bp.get("/models")
 def models():
     """GET: 모델 리스트 정보 요청"""
-    values = PostgresCRUD.select_query_by_list(
-        """
-        SELECT DISTINCT dmr.model 
-        FROM dm_matching_rate dmr 
-        ORDER BY dmr.model
-        """
-    )
+    values = PostgresCRUD.select_query_by_list("""
+        SELECT model FROM (
+            SELECT model FROM dm_recipe_info WHERE is_remove=false
+            UNION
+            SELECT model FROM dm_matching_rate
+        ) models
+        WHERE model IS NOT NULL AND BTRIM(model) <> ''
+        ORDER BY model
+        """)
     return ok(values, "list", "Model 목록 조회 성공", {"fab": CURRENT_FAB})
 
 
@@ -43,6 +45,8 @@ def get_no_master_detail():
     column_metadata = apply_default_rules(
         default_column_metadata(frame, id_cols, master_cols, params)
     )
+    frame = frame[id_cols + ["master_group"] + master_cols + params]
+
     return ok(
         data={
             "table": dataframe_payload(frame.to_dict(orient="records")),

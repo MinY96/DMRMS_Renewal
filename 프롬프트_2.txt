@@ -20,3 +20,6 @@ https://github.com/MinY96/DMRMS_Renewal.git
 4) 기타
 - 불일치 Recipe 조회/집계 제외 Recipe 조회 탭 선택 시 바로 테이블 업데이트 되도록 수정
 - README 파일은 한글로! 그리고 서버 운영 명령어도 정리 부탁해
+
+python .\apply_patch.py --root "D:\3_개발\7_DM_RMS_Renewal" --dry-run
+python .\apply_patch.py --root "D:\3_개발\7_DM_RMS_Renewal"

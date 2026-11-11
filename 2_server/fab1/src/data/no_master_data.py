@@ -7,21 +7,6 @@ import pandas as pd
 
 from src.databases import PostgresCRUD
 
-HEADER_DICT = {
-    "model": "Model",
-    "equip": "Equip",
-    "device": "Device",
-    "recipe": "Recipe",
-    "dt_edit_time": "수정시간",
-    "master_group": "기준정보 그룹",
-    "tech_prod": "Tech Prod",
-    "tech": "Tech",
-    "prod_group": "Prod Group",
-    "level": "Level",
-    "layer": "Layer",
-    "mode": "Mode",
-}
-
 
 def _options(frame: pd.DataFrame, column: str) -> list[str]:
     """컬럼의 고윳값 리스트 반환 함수
@@ -147,7 +132,7 @@ def default_column_metadata(
     default_metadata = {
         col: meta
         for col, meta in default_metadata.items()
-        if col in id_columns + master_columns
+        if col in id_columns + ["master_group"] + master_columns
     }
     for param in params:
         default_metadata.update(
@@ -223,6 +208,7 @@ def no_master_detail(model: str) -> Tuple[pd.DataFrame, Tuple[Any, Any, Any]]:
         ON dri.recipe_key = drp.recipe_key
         WHERE dri.model=%s
             AND drp.para_nm IS NOT NULL
+            AND drp.para_nm != 'mode'
         ORDER BY drp.para_nm
         """,
         (model,),
@@ -232,9 +218,13 @@ def no_master_detail(model: str) -> Tuple[pd.DataFrame, Tuple[Any, Any, Any]]:
     if model != "PUMA":
         master_columns.append("mode")
     if frame.empty:
-        return pd.DataFrame(
-            columns=id_columns + ["master_group"] + master_columns + params
-        ), ([], [], [])
+        return (
+            pd.DataFrame(
+                columns=id_columns + ["master_group"] + master_columns + params
+            ),
+            (id_columns, master_columns, params),
+            ([], [], []),
+        )
     pivot = frame.pivot_table(
         index=["recipe_key"],
         columns=["para_nm"],
@@ -245,7 +235,7 @@ def no_master_detail(model: str) -> Tuple[pd.DataFrame, Tuple[Any, Any, Any]]:
     frame = frame.drop_duplicates(subset="recipe_key").merge(
         pivot["para_value"].reset_index(), on="recipe_key", how="left"
     )
-    frame["master_group"] = "Group_" + frame.groupby(master_columns).ngroup().apply(
-        lambda x: f"{x+1:02d}"
-    )
+    # null 기준정보가 있어도 그룹 번호가 NaN/float가 되지 않도록 처리합니다.
+    group_numbers = frame.groupby(master_columns, dropna=False).ngroup()
+    frame["master_group"] = group_numbers.map(lambda n: f"Group_{int(n) + 1:02d}")
     return frame, (id_columns, master_columns, params)
