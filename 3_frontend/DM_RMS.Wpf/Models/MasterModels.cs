@@ -164,6 +164,8 @@ public sealed class MasterFilterItem : INotifyPropertyChanged
     public string Key { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public bool IsLikeFilter { get; set; }
+    public bool IsRequired { get; set; }
+    public bool IsMissingRequired => IsRequired && string.IsNullOrWhiteSpace(EffectiveValue);
     public ObservableCollection<string> Options { get; } = new();
 
     public string SelectedValue
@@ -188,6 +190,7 @@ public sealed class MasterFilterItem : INotifyPropertyChanged
         storage = value;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(EffectiveValue)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsMissingRequired)));
     }
 }
 

@@ -26,3 +26,5 @@ https://github.com/MinY96/DMRMS_Renewal.git
 7. 저장 전후 변화 비교
 - Master 편집에서 `기존값 → 변경값` 미리보기와 변경 건수 확인을 제공하면 실수로 변경하는 위험이 줄어듬.
 8. 모든 콤보박스에서 아이템의 Vertical Alignment가 중앙에 오도록
+
+python apply_patch.py --root "D:\3_개발\7_DM_RMS_Renewal" --dry-run

@@ -22,6 +22,7 @@ public sealed class MasterManagementViewModel : BaseViewModel
     private long _filterRequestVersion;
     private DataView? _masterListView;
     private bool _isEditMode;
+    private bool _isLoadingFilters;
 
     public MasterManagementViewModel(DmRmsApiService api, IDialogService dialog, bool canManageMaster)
     {
@@ -30,7 +31,7 @@ public sealed class MasterManagementViewModel : BaseViewModel
         CanManageMaster = canManageMaster;
 
         LoadFilterOptionsCommand = new AsyncRelayCommand(_ => LoadModelsAsync());
-        SearchMasterListCommand = new AsyncRelayCommand(_ => SearchMasterListAsync());
+        SearchMasterListCommand = new AsyncRelayCommand(_ => SearchMasterListAsync(), _ => CanSearchMasterList);
         LoadMasterDetailCommand = new AsyncRelayCommand(row => LoadMasterDetailAsync(row));
         DeleteMasterCommand = new AsyncRelayCommand(row => DeleteMasterAsync(row), _ => CanManageMaster);
         BeginEditCommand = new RelayCommand(_ => SetEditMode(true), _ => CanManageMaster);
@@ -44,7 +45,17 @@ public sealed class MasterManagementViewModel : BaseViewModel
         CopyMasterDetailCommand = new RelayCommand(_ => CopyMasterDetailToClipboard());
         ExportMasterDetailExcelCommand = new RelayCommand(_ => ExportExcel(CreateMasterDetailTable(), "master_recipe_detail.xlsx", "MasterDetail"));
 
-        MasterParameters.CollectionChanged += (_, _) => OnPropertyChanged(nameof(MasterDetailRowCount));
+        MasterParameters.CollectionChanged += (_, e) =>
+        {
+            if (e.OldItems != null)
+                foreach (MasterParameterItem item in e.OldItems)
+                    item.PropertyChanged -= OnMasterParameterChanged;
+            if (e.NewItems != null)
+                foreach (MasterParameterItem item in e.NewItems)
+                    item.PropertyChanged += OnMasterParameterChanged;
+            OnPropertyChanged(nameof(MasterDetailRowCount));
+            OnPropertyChanged(nameof(ChangedMasterCount));
+        };
 
         _ = LoadModelsAsync();
     }
@@ -74,6 +85,9 @@ public sealed class MasterManagementViewModel : BaseViewModel
             if (SetProperty(ref _selectedModel, value ?? string.Empty))
             {
                 OnPropertyChanged(nameof(CanCreateNewMaster));
+                OnPropertyChanged(nameof(SelectedModelDescription));
+                OnPropertyChanged(nameof(CanSearchMasterList));
+                ((AsyncRelayCommand)SearchMasterListCommand).RaiseCanExecuteChanged();
                 ((AsyncRelayCommand)OpenNewMasterCommand).RaiseCanExecuteChanged();
                 _ = LoadFilterOptionsAsync();
             }
@@ -81,6 +95,29 @@ public sealed class MasterManagementViewModel : BaseViewModel
     }
 
     public bool CanCreateNewMaster => CanManageMaster && !string.IsNullOrWhiteSpace(SelectedModel);
+    public string SelectedModelDescription => string.IsNullOrWhiteSpace(SelectedModel)
+        ? "선택된 Model 없음 · 먼저 Model을 선택하세요."
+        : $"현재 Model: {SelectedModel}";
+    public bool IsLoadingFilters
+    {
+        get => _isLoadingFilters;
+        private set
+        {
+            if (!SetProperty(ref _isLoadingFilters, value)) return;
+            OnPropertyChanged(nameof(FilterLoadingDescription));
+            OnPropertyChanged(nameof(CanSearchMasterList));
+            ((AsyncRelayCommand)SearchMasterListCommand).RaiseCanExecuteChanged();
+        }
+    }
+    public string FilterLoadingDescription => IsLoadingFilters ? "기준정보 불러오는 중..." : string.Empty;
+    public bool CanSearchMasterList => !IsLoadingFilters && !string.IsNullOrWhiteSpace(SelectedModel);
+    public int ChangedMasterCount => MasterParameters.Count(x => x.IsChanged);
+
+    private void OnMasterParameterChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MasterParameterItem.IsChanged))
+            OnPropertyChanged(nameof(ChangedMasterCount));
+    }
 
     public string SelectedMasterKey
     {
@@ -173,7 +210,8 @@ public sealed class MasterManagementViewModel : BaseViewModel
         MasterParameters.Clear();
         SelectedMasterKey = string.Empty;
         IsEditMode = false;
-
+        // 이전 요청의 완료 이벤트는 generation 검사 후에만 현재 로딩 상태를 변경할 수 있습니다.
+        IsLoadingFilters = !string.IsNullOrWhiteSpace(model);
         if (string.IsNullOrWhiteSpace(model)) return;
 
         try
@@ -222,10 +260,16 @@ public sealed class MasterManagementViewModel : BaseViewModel
             if (generation == System.Threading.Interlocked.Read(ref _filterRequestVersion))
                 _dialog.ShowError(ex.Message);
         }
+        finally
+        {
+            if (generation == System.Threading.Interlocked.Read(ref _filterRequestVersion))
+                IsLoadingFilters = false;
+        }
     }
 
     private async Task SearchMasterListAsync()
     {
+        if (IsLoadingFilters) return;
         if (string.IsNullOrWhiteSpace(SelectedModel))
         {
             _dialog.ShowInfo("조회할 Model을 먼저 선택하세요.");
@@ -309,7 +353,13 @@ public sealed class MasterManagementViewModel : BaseViewModel
                 return;
             }
 
-            if (!_dialog.Confirm($"{SelectedMasterKey}의 변경된 Parameter {changedItems.Count}개를 저장하시겠습니까?"))
+            var preview = changedItems.Select(x => new MasterChangePreviewItem
+            {
+                ParameterName = x.ParameterName,
+                OriginalValue = x.DisplayValue,
+                UpdatedValue = x.GetCurrentValue()
+            }).ToList();
+            if (!_dialog.ConfirmMasterChanges(SelectedMasterKey, preview))
                 return;
 
             var request = new MasterUpdateRequest

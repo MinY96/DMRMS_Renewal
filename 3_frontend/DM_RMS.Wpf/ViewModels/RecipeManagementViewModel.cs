@@ -31,6 +31,13 @@ public sealed class RecipeManagementViewModel : BaseViewModel
     private bool? _areAllVisibleRecipesSelected = false;
     private bool _isEquipmentPanelOpen;
     private bool _isProcessingPanelOpen;
+    private bool _isRecipeOperationRunning;
+    private double _equipmentPanelWidth = 560;
+    private double _processingPanelWidth = 590;
+    private int _lastSuccessCount;
+    private int _lastFailureCount;
+    private int _lastUnprocessedCount;
+    private string _lastOperationSummary = "최근 실행 결과 없음";
 
     public RecipeManagementViewModel(
         DmRmsApiService api,
@@ -51,10 +58,10 @@ public sealed class RecipeManagementViewModel : BaseViewModel
         ChooseBackupPathCommand = new RelayCommand(_ => ChooseBackupPath());
         BackupSelectedRecipesCommand = new AsyncRelayCommand(
             _ => BackupSelectedRecipesAsync(),
-            _ => HasBackupPath);
+            _ => HasBackupPath && !IsRecipeOperationRunning);
         DeleteSelectedRecipesCommand = new AsyncRelayCommand(
             _ => DeleteSelectedRecipesAsync(),
-            _ => CanDeleteRecipes && HasBackupPath);
+            _ => CanDeleteRecipes && HasBackupPath && !IsRecipeOperationRunning);
         CopyEquipmentSummaryCommand = new RelayCommand(_ => DataTableExportHelper.CopyToClipboard(EquipmentSummaryView, EquipmentSummaryHiddenColumns));
         CopyRecipeListCommand = new RelayCommand(_ => DataTableExportHelper.CopyToClipboard(RecipeListView, RecipeListHiddenColumns));
         CopyRecipeDetailCommand = new RelayCommand(_ => DataTableExportHelper.CopyToClipboard(RecipeDetailView, RecipeDetailHiddenColumns));
@@ -141,6 +148,74 @@ public sealed class RecipeManagementViewModel : BaseViewModel
     }
 
     public bool IsAnySidePanelOpen => IsEquipmentPanelOpen || IsProcessingPanelOpen;
+
+    public double EquipmentPanelWidth
+    {
+        get => _equipmentPanelWidth;
+        set => SetProperty(ref _equipmentPanelWidth, Math.Clamp(value, 440, 850));
+    }
+    public double ProcessingPanelWidth
+    {
+        get => _processingPanelWidth;
+        set => SetProperty(ref _processingPanelWidth, Math.Clamp(value, 470, 900));
+    }
+    public bool IsRecipeOperationRunning
+    {
+        get => _isRecipeOperationRunning;
+        private set
+        {
+            if (!SetProperty(ref _isRecipeOperationRunning, value)) return;
+            BackupSelectedRecipesCommand.RaiseCanExecuteChanged();
+            DeleteSelectedRecipesCommand.RaiseCanExecuteChanged();
+        }
+    }
+    public int LastSuccessCount { get => _lastSuccessCount; private set => SetProperty(ref _lastSuccessCount, value); }
+    public int LastFailureCount { get => _lastFailureCount; private set => SetProperty(ref _lastFailureCount, value); }
+    public int LastUnprocessedCount { get => _lastUnprocessedCount; private set => SetProperty(ref _lastUnprocessedCount, value); }
+    public string LastOperationSummary { get => _lastOperationSummary; private set => SetProperty(ref _lastOperationSummary, value); }
+
+    /// <summary>
+    /// ZIP result.json에서 확인한 결과만 성공으로 간주합니다.
+    /// 서버 오류나 타임아웃은 성공/실패를 단정하지 않고 '확인 필요'로 표시합니다.
+    /// </summary>
+    private void ApplyOperationResults(string action, IReadOnlyList<RecipeOperationItemResult> results, int requestedCount)
+    {
+        var unique = results
+            .Where(x => !string.IsNullOrWhiteSpace(x.RecipeKey))
+            .GroupBy(x => x.RecipeKey, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.Last(), StringComparer.OrdinalIgnoreCase);
+        LastSuccessCount = unique.Values.Count(x => x.Success);
+        LastFailureCount = unique.Values.Count(x => !x.Success);
+        LastUnprocessedCount = Math.Max(0, requestedCount - unique.Count);
+        LastOperationSummary = $"최근 {action}: 성공 {LastSuccessCount:N0} / 실패 {LastFailureCount:N0} / 미처리·확인 필요 {LastUnprocessedCount:N0}";
+        foreach (var item in SelectedRecipes)
+        {
+            var key = $"{item.EqpId}-{item.RecipeName}";
+            if (unique.TryGetValue(key, out var result))
+            {
+                item.OperationStatus = result.Success ? "성공" : "실패";
+                item.OperationMessage = result.Message;
+            }
+            else
+            {
+                item.OperationStatus = "확인 필요";
+                item.OperationMessage = "서버 처리 결과가 없어 상태를 확인해야 합니다.";
+            }
+        }
+    }
+
+    private void MarkOperationUnknown(string action, int count)
+    {
+        LastSuccessCount = 0;
+        LastFailureCount = 0;
+        LastUnprocessedCount = count;
+        LastOperationSummary = $"{action} 결과 확인 필요: {count:N0}건 (실제 처리 여부 미확인)";
+        foreach (var item in SelectedRecipes)
+        {
+            item.OperationStatus = "확인 필요";
+            item.OperationMessage = "통신·서버 오류: 실제 처리 여부를 새로고침하여 확인하세요.";
+        }
+    }
 
     public DataView? EquipmentSummaryView
     {
@@ -318,7 +393,7 @@ public sealed class RecipeManagementViewModel : BaseViewModel
                 return;
             }
             if (!_dialog.Confirm($"{SelectedRecipes.Count}개 Recipe를 백업하시겠습니까?")) return;
-
+            IsRecipeOperationRunning = true;
             var request = new RecipeActionRequest
             {
                 BackupPath = BackupPath,
@@ -327,13 +402,19 @@ public sealed class RecipeManagementViewModel : BaseViewModel
             var response = await _api.BackupRecipesAsync(request);
             var extracted = _archiveService.Extract(response, BackupPath!);
             var manifest = extracted.Manifest;
-            StatusMessage = $"Recipe 백업 완료: {manifest.SuccessCount}개, 실패 {manifest.EffectiveFailureCount}개";
+            ApplyOperationResults("백업", manifest.Results, request.Items.Count);
+            StatusMessage = LastOperationSummary;
             _dialog.ShowInfo($"{StatusMessage}\n저장 위치: {extracted.DestinationDirectory}");
         }
         catch (Exception ex)
         {
-            StatusMessage = "Recipe 백업 실패";
+            if (IsRecipeOperationRunning) MarkOperationUnknown("백업", SelectedRecipes.Count);
+            StatusMessage = "Recipe 백업 실패 · 결과 확인 필요";
             _dialog.ShowError(ex.Message);
+        }
+        finally
+        {
+            IsRecipeOperationRunning = false;
         }
     }
 
@@ -365,7 +446,7 @@ public sealed class RecipeManagementViewModel : BaseViewModel
                 return;
             }
             if (!_dialog.Confirm($"{SelectedRecipes.Count}개 Recipe를 삭제하시겠습니까?\n장비에서 직접 삭제되는 작업입니다.")) return;
-
+            IsRecipeOperationRunning = true;
             var request = new RecipeActionRequest
             {
                 BackupPath = BackupPath,
@@ -374,15 +455,22 @@ public sealed class RecipeManagementViewModel : BaseViewModel
             var response = await _api.DeleteRecipesAsync(request);
             var extracted = _archiveService.Extract(response, BackupPath!);
             var manifest = extracted.Manifest;
+            // 성공으로 확인된 항목만 현재 화면에서 삭제합니다. 실패 항목은 선택 상태를 보존합니다.
             RemoveDeletedRows(manifest.DeletedItems);
             SyncSelectedRecipesFromRecipeList();
-            StatusMessage = $"Recipe 삭제 완료: {manifest.DeletedCount}개, 실패 {manifest.EffectiveFailureCount}개";
+            ApplyOperationResults("삭제", manifest.DeleteResults, request.Items.Count);
+            StatusMessage = LastOperationSummary;
             _dialog.ShowInfo($"{StatusMessage}\n선행 백업 위치: {extracted.DestinationDirectory}");
         }
         catch (Exception ex)
         {
-            StatusMessage = "Recipe 삭제 실패";
+            if (IsRecipeOperationRunning) MarkOperationUnknown("삭제", SelectedRecipes.Count);
+            StatusMessage = "Recipe 삭제 실패 · 결과 확인 필요 (장비 및 DB 재조회 권장)";
             _dialog.ShowError(ex.Message);
+        }
+        finally
+        {
+            IsRecipeOperationRunning = false;
         }
     }
 

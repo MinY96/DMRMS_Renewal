@@ -5,6 +5,7 @@
              xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
              xmlns:conv="clr-namespace:DM_RMS.Wpf.Converters">
     <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <Style x:Key="IntegerUpDownStyle" TargetType="{x:Type xctk:IntegerUpDown}">
             <Setter Property="Height" Value="26" />
             <Setter Property="IsEnabled" Value="{Binding IsEditMode}" />
@@ -101,6 +102,7 @@
                 <StackPanel DockPanel.Dock="Left">
                     <TextBlock Text="Master Recipe 관리" Style="{StaticResource PageTitleTextStyle}" />
                     <TextBlock Text="기준정보 조회 → Master 상세 확인 → 변경 Parameter만 저장 / 신규 Master 생성" Style="{StaticResource MutedTextStyle}" Margin="0,4,0,0" />
+                    <TextBlock Text="{Binding SelectedModelDescription}" Style="{StaticResource MutedTextStyle}" Margin="0,3,0,0" />
                 </StackPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
                     <Border Style="{StaticResource BadgeStyle}" Margin="0,0,8,0">
@@ -124,20 +126,27 @@
                     <TextBlock Text="Fab별 기준정보에 맞춰 필터가 자동 구성됩니다." Style="{StaticResource MutedTextStyle}" />
                 </StackPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="16,0,0,0">
-                    <Button Content="조회" Style="{StaticResource SoftPrimaryButtonStyle}" Command="{Binding SearchMasterListCommand}" />
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <ProgressBar Width="64" Height="5" Margin="0,0,8,0" IsIndeterminate="True"
+                                     Visibility="{Binding IsLoadingFilters, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        <TextBlock Text="{Binding FilterLoadingDescription}" VerticalAlignment="Center"
+                                   Style="{StaticResource MutedTextStyle}" Margin="0,0,8,0" />
+                        <Button Content="조회" Style="{StaticResource SoftPrimaryButtonStyle}"
+                                Command="{Binding SearchMasterListCommand}" IsEnabled="{Binding CanSearchMasterList}" />
+                    </StackPanel>
                 </StackPanel>
                 <ItemsControl ItemsSource="{Binding Filters}" Margin="24,0,0,0">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <WrapPanel />
+                            <UniformGrid Columns="3" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel Margin="0,0,18,8">
+                            <StackPanel Margin="0,0,14,8" MinWidth="145">
                                 <TextBlock Text="{Binding DisplayName}" Style="{StaticResource MutedTextStyle}" Margin="0,0,0,4" />
                                 <Grid>
-                                    <ComboBox Width="145" ItemsSource="{Binding Options}" SelectedItem="{Binding SelectedValue}">
+                                    <ComboBox MinWidth="135" HorizontalAlignment="Stretch" ItemsSource="{Binding Options}" SelectedItem="{Binding SelectedValue}">
                                         <ComboBox.Style>
                                             <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
                                                 <Setter Property="Visibility" Value="Visible" />
@@ -149,7 +158,7 @@
                                             </Style>
                                         </ComboBox.Style>
                                     </ComboBox>
-                                    <TextBox Width="145" Text="{Binding TextValue, UpdateSourceTrigger=PropertyChanged}">
+                                    <TextBox MinWidth="135" HorizontalAlignment="Stretch" Text="{Binding TextValue, UpdateSourceTrigger=PropertyChanged}">
                                         <TextBox.Style>
                                             <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
                                                 <Setter Property="Visibility" Value="Collapsed" />
@@ -298,7 +307,10 @@
                             </StackPanel>
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
                                 <Button Content="편집" IsEnabled="{Binding CanManageMaster}" ToolTip="관리자 계정에서만 사용할 수 있습니다." Command="{Binding BeginEditCommand}" />
-                                <Button Content="저장" IsEnabled="{Binding CanManageMaster}" ToolTip="관리자 계정에서만 사용할 수 있습니다." Style="{StaticResource SoftPrimaryButtonStyle}" Command="{Binding SaveMasterDetailCommand}" />
+                                <Border Style="{StaticResource RowCountBadgeStyle}" Margin="0,0,6,0">
+                                    <TextBlock Text="{Binding ChangedMasterCount, StringFormat='변경 {0:N0}건'}" />
+                                </Border>
+                                <Button Content="변경 미리보기 / 저장" IsEnabled="{Binding CanManageMaster}" ToolTip="변경 전후 값을 비교하고 저장을 확정합니다." Style="{StaticResource SoftPrimaryButtonStyle}" Command="{Binding SaveMasterDetailCommand}" />
                                 <Button Content="취소" Command="{Binding CancelEditCommand}" />
                                 <Button Content="파일로 저장" Command="{Binding SaveMasterJsonFileCommand}" />
                             </StackPanel>

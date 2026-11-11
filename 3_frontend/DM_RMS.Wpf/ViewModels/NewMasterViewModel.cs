@@ -14,6 +14,8 @@ public sealed class NewMasterViewModel : BaseViewModel
     private readonly IDialogService _dialog;
     private MasterParameterDto? _selectedParameterOption;
     private string _statusMessage = "준비";
+    private bool _isCreating;
+    private bool _isInitialized;
 
     public NewMasterViewModel(
         DmRmsApiService api,
@@ -25,14 +27,21 @@ public sealed class NewMasterViewModel : BaseViewModel
         _dialog = dialog;
         SelectedModel = selectedModel;
 
-        Criteria = new ObservableCollection<MasterFilterItem>(CloneCriteriaFilters(sourceFilters));
+        Criteria = new ObservableCollection<MasterFilterItem>(CloneCriteriaFilters(sourceFilters, selectedModel));
+        foreach (var criterion in Criteria)
+            criterion.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(MasterFilterItem.EffectiveValue))
+                    RefreshCreationState();
+            };
         Parameters = new ObservableCollection<MasterParameterItem>();
+        Parameters.CollectionChanged += (_, _) => RefreshCreationState();
         ParameterOptions = new ObservableCollection<MasterParameterDto>();
 
         AddParameterCommand = new RelayCommand(_ => AddSelectedParameter());
         LoadJsonFileCommand = new RelayCommand(_ => LoadJsonFile());
         RemoveParameterCommand = new RelayCommand(parameter => RemoveParameter(parameter));
-        CreateMasterCommand = new AsyncRelayCommand(_ => CreateMasterAsync());
+        CreateMasterCommand = new AsyncRelayCommand(_ => CreateMasterAsync(), _ => CanCreateMaster);
         CloseCommand = new RelayCommand(_ => RequestClose?.Invoke(false));
     }
 
@@ -55,6 +64,20 @@ public sealed class NewMasterViewModel : BaseViewModel
     }
 
     public bool Created { get; private set; }
+    public bool HasMissingCriteria => Criteria.Any(x => x.IsMissingRequired);
+    public bool CanCreateMaster => _isInitialized && !_isCreating
+        && !string.IsNullOrWhiteSpace(SelectedModel)
+        && !HasMissingCriteria && Parameters.Count > 0;
+    public string CriteriaValidationMessage => HasMissingCriteria
+        ? "* 표시 기준정보를 모두 입력하세요." : "필수 기준정보가 입력되었습니다.";
+
+    private void RefreshCreationState()
+    {
+        OnPropertyChanged(nameof(HasMissingCriteria));
+        OnPropertyChanged(nameof(CriteriaValidationMessage));
+        OnPropertyChanged(nameof(CanCreateMaster));
+        ((AsyncRelayCommand)CreateMasterCommand).RaiseCanExecuteChanged();
+    }
 
     public ICommand AddParameterCommand { get; }
     public ICommand LoadJsonFileCommand { get; }
@@ -87,6 +110,8 @@ public sealed class NewMasterViewModel : BaseViewModel
                 Parameters.Add(item);
             }
 
+            _isInitialized = true;
+            RefreshCreationState();
             StatusMessage = Parameters.Count == 0
                 ? "기존 Master 템플릿이 없습니다. 우측 Parameter 목록에서 필요한 항목을 추가하세요."
                 : "신규 Master 생성 준비 완료";
@@ -219,11 +244,18 @@ public sealed class NewMasterViewModel : BaseViewModel
 
     private async Task CreateMasterAsync()
     {
+        if (HasMissingCriteria)
+        {
+            _dialog.ShowInfo("필수 기준정보를 모두 입력하세요.");
+            return;
+        }
         if (string.IsNullOrWhiteSpace(SelectedModel))
         {
             _dialog.ShowInfo("Model 선택이 필요합니다.");
             return;
         }
+        _isCreating = true;
+        RefreshCreationState();
         try
         {
             if (Parameters.Count == 0)
@@ -269,9 +301,14 @@ public sealed class NewMasterViewModel : BaseViewModel
             StatusMessage = "신규 Master 생성 실패";
             _dialog.ShowError(ex.Message);
         }
+        finally
+        {
+            _isCreating = false;
+            RefreshCreationState();
+        }
     }
 
-    private static IEnumerable<MasterFilterItem> CloneCriteriaFilters(IEnumerable<MasterFilterItem> sourceFilters)
+    private static IEnumerable<MasterFilterItem> CloneCriteriaFilters(IEnumerable<MasterFilterItem> sourceFilters, string model)
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var source in sourceFilters)
@@ -285,6 +322,8 @@ public sealed class NewMasterViewModel : BaseViewModel
                 Key = source.Key,
                 DisplayName = source.DisplayName,
                 IsLikeFilter = source.IsLikeFilter,
+                IsRequired = key is "tech_prod" or "tech" or "prod_group" or "level" or "layer"
+                    || (key == "mode" && !string.Equals(model, "PUMA", StringComparison.OrdinalIgnoreCase)),
                 TextValue = string.Empty,
                 SelectedValue = string.Empty
             };

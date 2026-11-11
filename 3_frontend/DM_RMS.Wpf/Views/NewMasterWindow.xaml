@@ -7,6 +7,7 @@
         Title="신규 Master Recipe 생성" Height="720" Width="1100"
         WindowStartupLocation="CenterOwner" Icon="/DM_RMS;component/Resources/DM_RMS.ico">
     <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <Style x:Key="IntegerUpDownStyle" TargetType="{x:Type xctk:IntegerUpDown}">
             <Setter Property="Height" Value="26" />
             <Setter Property="IsEnabled" Value="{Binding IsEditMode}" />
@@ -100,7 +101,10 @@
         </StackPanel>
 
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-            <Button Content="생성" Width="90" Height="32" Command="{Binding CreateMasterCommand}" />
+            <TextBlock Text="{Binding CriteriaValidationMessage}" Foreground="#A43A3A"
+                       VerticalAlignment="Center" Margin="0,0,12,0" />
+            <Button Content="생성" Width="90" Height="32" Command="{Binding CreateMasterCommand}"
+                    IsEnabled="{Binding CanCreateMaster}" />
             <Button Content="닫기" Width="90" Height="32" Margin="8,0,0,0" Command="{Binding CloseCommand}" />
         </StackPanel>
 
@@ -117,13 +121,17 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Margin="0,0,0,10">
-                                    <TextBlock Text="{Binding DisplayName}" Margin="0,0,0,3" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                        <TextBlock Text="{Binding DisplayName}" />
+                                        <TextBlock Text=" *" Foreground="#B91C1C" FontWeight="Bold"
+                                                   Visibility="{Binding IsRequired, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    </StackPanel>
                                     <ComboBox ItemsSource="{Binding Options}"
                                               SelectedItem="{Binding SelectedValue}"
                                               Text="{Binding SelectedValue, UpdateSourceTrigger=PropertyChanged}"
                                               IsEditable="True">
                                         <ComboBox.Style>
-                                            <Style TargetType="ComboBox">
+                                            <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
                                                 <Setter Property="Visibility" Value="Visible" />
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsLikeFilter}" Value="True">
@@ -145,6 +153,8 @@
                                             </Style>
                                         </TextBox.Style>
                                     </TextBox>
+                                    <TextBlock Text="필수 입력" Foreground="#B91C1C" FontSize="11"
+                                               Visibility="{Binding IsMissingRequired, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                 </StackPanel>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>

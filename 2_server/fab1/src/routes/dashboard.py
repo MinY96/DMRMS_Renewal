@@ -40,13 +40,11 @@ def _selected_equipment() -> str:
 @dashboard_bp.get("/models")
 def models():
     """GET: 모델 리스트 정보 요청"""
-    values = PostgresCRUD.select_query_by_list(
-        """
+    values = PostgresCRUD.select_query_by_list("""
         SELECT DISTINCT dmr.model 
         FROM dm_matching_rate dmr 
         ORDER BY dmr.model
-        """
-    )
+        """)
     return ok(values, "list", "Model 목록 조회 성공", {"fab": CURRENT_FAB})
 
 

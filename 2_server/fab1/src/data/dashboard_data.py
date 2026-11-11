@@ -111,7 +111,6 @@ def matching_history(model: str, equipment: str) -> pd.DataFrame:
     if frame.empty:
         return pd.DataFrame(columns=columns)
 
-    frame["matching_rate"] = frame["matching_rate"] * 100
     numeric_columns = columns[:-1]
     for column in numeric_columns:
         frame[column] = pd.to_numeric(frame[column], errors="coerce").fillna(0)
@@ -621,7 +620,7 @@ def cards(frame: pd.DataFrame, model: str, equipment: str) -> list[dict[str, str
         {"title": "조회 장비", "value": equipment, "description": f"Model: {model}"},
         {
             "title": "최신 Matching Rate",
-            "value": f"{float(latest['matching_rate']):.2f}%",
+            "value": f"{float(latest['matching_rate']*100):.2f}%",
             "description": f"집계 {latest['aggregate_time']:%Y-%m-%d %H:%M}",
         },
         {

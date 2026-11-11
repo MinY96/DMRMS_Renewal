@@ -1,4 +1,4 @@
-﻿using DM_RMS.Wpf.Commands;
+using DM_RMS.Wpf.Commands;
 using DM_RMS.Wpf.Models;
 using DM_RMS.Wpf.Services;
 using System.Windows.Input;
@@ -8,6 +8,7 @@ namespace DM_RMS.Wpf.ViewModels;
 public sealed class LoginViewModel : BaseViewModel
 {
     private readonly ApiHostProvider _apiHostProvider;
+    private readonly IDialogService _dialogs = new DialogService();
     private string _selectedFab = "fab1";
     private string _userId = "";
     //private string _password = "admin";
@@ -82,11 +83,8 @@ public sealed class LoginViewModel : BaseViewModel
             return;
         }
 
-        try
+        await UiOperationRunner.RunAsync(async () =>
         {
-            IsBusy = true;
-            StatusMessage = "로그인 요청 중...";
-
             string baseUrl = _apiHostProvider.GetBaseUrl(SelectedFab);
             var api = new DmRmsApiService(new ApiClient(baseUrl));
 
@@ -141,19 +139,7 @@ public sealed class LoginViewModel : BaseViewModel
 
             StatusMessage = "로그인 성공";
             LoginSucceeded?.Invoke(this, session);
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = "로그인 실패";
-            System.Windows.MessageBox.Show(
-                ex.Message,
-                "로그인 실패",
-                System.Windows.MessageBoxButton.OK,
-                System.Windows.MessageBoxImage.Error);
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+        }, _dialogs, value => IsBusy = value, value => StatusMessage = value,
+           "로그인 요청 중...", "로그인 실패");
     }
 }

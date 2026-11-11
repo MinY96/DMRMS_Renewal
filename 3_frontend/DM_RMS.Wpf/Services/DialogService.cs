@@ -12,6 +12,7 @@ public interface IDialogService
     string? SelectSaveFile(string filter, string defaultFileName);
     string? SelectOpenFile(string filter, string title = "파일을 선택하세요.");
     bool? ShowNewMasterDialog(NewMasterViewModel viewModel);
+    bool ConfirmMasterChanges(string masterKey, IReadOnlyList<DM_RMS.Wpf.Models.MasterChangePreviewItem> changes);
 }
 
 public sealed class DialogService : IDialogService
@@ -41,6 +42,14 @@ public sealed class DialogService : IDialogService
     {
         var dialog = new Microsoft.Win32.OpenFileDialog { Filter = filter, Title = title };
         return dialog.ShowDialog() == true ? dialog.FileName : null;
+    }
+
+    public bool ConfirmMasterChanges(string masterKey, IReadOnlyList<DM_RMS.Wpf.Models.MasterChangePreviewItem> changes)
+    {
+        var viewModel = new MasterChangePreviewViewModel(masterKey, changes);
+        var window = new MasterChangePreviewWindow { DataContext = viewModel };
+        viewModel.CloseRequested += confirmed => window.DialogResult = confirmed;
+        return window.ShowDialog() == true;
     }
 
     public bool? ShowNewMasterDialog(NewMasterViewModel viewModel)

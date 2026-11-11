@@ -102,7 +102,6 @@ def recipe_detail(eqp_id: str, recipe_name: str) -> list[dict]:
             AND drp.para_nm=dmrp.para_nm)
     WHERE dri.recipe_key=%s
         AND drp.para_nm!='mode'
-        AND dmrp.para_value IS NOT NULL
     ORDER BY drp.para_nm
     """
     df = PostgresCRUD.select_query(query, (f"{eqp_id}-{recipe_name}",))

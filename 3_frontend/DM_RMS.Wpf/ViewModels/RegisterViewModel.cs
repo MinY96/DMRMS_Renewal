@@ -8,6 +8,7 @@ namespace DM_RMS.Wpf.ViewModels;
 public sealed class RegisterViewModel : BaseViewModel
 {
     private readonly ApiHostProvider _apiHostProvider;
+    private readonly IDialogService _dialogs = new DialogService();
     private string _selectedFab = "fab1";
     private string _userId = string.Empty;
     private string _password = string.Empty;
@@ -86,11 +87,8 @@ public sealed class RegisterViewModel : BaseViewModel
             return;
         }
 
-        try
+        await UiOperationRunner.RunAsync(async () =>
         {
-            IsBusy = true;
-            StatusMessage = "신규 등록 요청 중...";
-
             string baseUrl = _apiHostProvider.GetBaseUrl(SelectedFab);
             var api = new DmRmsApiService(new ApiClient(baseUrl));
 
@@ -109,19 +107,7 @@ public sealed class RegisterViewModel : BaseViewModel
                 System.Windows.MessageBoxImage.Information);
 
             RegisterSucceeded?.Invoke(this, EventArgs.Empty);
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = "신규 등록 실패";
-            System.Windows.MessageBox.Show(
-                ex.Message,
-                "신규 등록 실패",
-                System.Windows.MessageBoxButton.OK,
-                System.Windows.MessageBoxImage.Error);
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+        }, _dialogs, value => IsBusy = value, value => StatusMessage = value,
+           "신규 등록 요청 중...", "신규 등록 실패");
     }
 }
