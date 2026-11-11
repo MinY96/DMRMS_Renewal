@@ -28,7 +28,7 @@ public sealed class MainViewModel : BaseViewModel
 
         Recipe.SelectedFab = SelectedFab;
         Master.SelectedFab = SelectedFab;
-        Dashboard.SelectedFab = SelectedFab;        
+        Dashboard.SelectedFab = SelectedFab;
     }
 
     /// <summary>탭 이동 시 실제 조회 시점에 맞춰 테이블 데이터를 갱신합니다.</summary>

@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using Binding = System.Windows.Data.Binding;
 
 namespace DM_RMS.Wpf.Behaviors;

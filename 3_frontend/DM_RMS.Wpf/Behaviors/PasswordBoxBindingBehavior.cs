@@ -11,7 +11,7 @@ public static class PasswordBoxBindingBehavior
             typeof(string),
             typeof(PasswordBoxBindingBehavior),
             new FrameworkPropertyMetadata(
-                null, 
+                null,
                 FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
                 OnBoundPasswordChanged));
 
@@ -52,7 +52,7 @@ public static class PasswordBoxBindingBehavior
             if (passwordBox.Password != newPassword)
             {
                 passwordBox.Password = newPassword;
-            }            
+            }
         }
 
         passwordBox.PasswordChanged += OnPasswordChanged;

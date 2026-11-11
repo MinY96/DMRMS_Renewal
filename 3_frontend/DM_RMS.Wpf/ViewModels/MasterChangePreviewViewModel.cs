@@ -1,7 +1,6 @@
-using System.Collections.Generic;
-using System.Windows.Input;
 using DM_RMS.Wpf.Commands;
 using DM_RMS.Wpf.Models;
+using System.Windows.Input;
 
 namespace DM_RMS.Wpf.ViewModels;
 

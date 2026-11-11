@@ -1,19 +1,17 @@
-﻿using System.Linq;
-using DM_RMS.Wpf.Models;
+﻿using DM_RMS.Wpf.Models;
 using System.Collections;
 using System.Collections.Specialized;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Media;
 using Binding = System.Windows.Data.Binding;
-using ComboBox = System.Windows.Controls.ComboBox;
-using Orientation = System.Windows.Controls.Orientation;
-using TextBox = System.Windows.Controls.TextBox;
-using Brushes = System.Windows.Media.Brushes;
 using Brush = System.Windows.Media.Brush;
-using Panel = System.Windows.Controls.Panel;
+using Brushes = System.Windows.Media.Brushes;
+using ComboBox = System.Windows.Controls.ComboBox;
 using Control = System.Windows.Controls.Control;
+using Orientation = System.Windows.Controls.Orientation;
+using Panel = System.Windows.Controls.Panel;
+using TextBox = System.Windows.Controls.TextBox;
 
 namespace DM_RMS.Wpf.Behaviors;
 
@@ -118,7 +116,7 @@ public static class DataGridColumnFilterHeaderBehavior
         dataGrid.Dispatcher.BeginInvoke(
             new Action(
                 () => ApplyFilterHeaders(dataGrid)),
-            System.Windows.Threading.DispatcherPriority.Loaded);        
+            System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
     private static void ApplyFilterHeaders(DataGrid dataGrid)
@@ -152,9 +150,9 @@ public static class DataGridColumnFilterHeaderBehavior
                 : filter.DisplayName;
 
             //Brush? headerBackground = GetHeaderBackground(column.Header);
-            Brush? headerBackground = 
+            Brush? headerBackground =
                 column.GetValue(
-                    OriginalHeaderBackgroundProperty) as Brush 
+                    OriginalHeaderBackgroundProperty) as Brush
                     ?? GetHeaderBackground(column.Header);
             if (headerBackground is not null)
             {
@@ -187,8 +185,8 @@ public static class DataGridColumnFilterHeaderBehavior
             var headerBorder = new Border
             {
                 Background = headerBackground ?? Brushes.Transparent,
-                Padding = new Thickness(4,3,4,3),
-                Margin = new Thickness(0,0,0,4),
+                Padding = new Thickness(4, 3, 4, 3),
+                Margin = new Thickness(0, 0, 0, 4),
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
                 Child = new TextBlock
                 {
@@ -291,7 +289,7 @@ public static class DataGridColumnFilterHeaderBehavior
     {
         foreach (DataGridColumn column in dataGrid.Columns)
         {
-            if (column.Header is StackPanel panel && 
+            if (column.Header is StackPanel panel &&
                 string.Equals(
                     panel.Tag as string,
                     "DMRMS_FILTER_HEADER",
@@ -346,7 +344,7 @@ public static class DataGridColumnFilterHeaderBehavior
     }
 
     private static readonly DependencyProperty
-        OriginalHeaderBackgroundProperty = 
+        OriginalHeaderBackgroundProperty =
             DependencyProperty.RegisterAttached(
                 "OriginalHeaderBackground",
                 typeof(Brush),

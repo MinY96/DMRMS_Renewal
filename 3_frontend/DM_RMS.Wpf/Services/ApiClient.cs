@@ -1,7 +1,7 @@
+using DM_RMS.Wpf.Models;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
-using DM_RMS.Wpf.Models;
 
 namespace DM_RMS.Wpf.Services;
 
@@ -22,7 +22,7 @@ public sealed class ApiClient
 
     public ApiClient(string baseUrl, int TimeoutSecond = 300)
     {
-        _httpClient = new HttpClient { BaseAddress = new Uri(baseUrl), Timeout = TimeSpan.FromSeconds(TimeoutSecond) };        
+        _httpClient = new HttpClient { BaseAddress = new Uri(baseUrl), Timeout = TimeSpan.FromSeconds(TimeoutSecond) };
     }
 
     public async Task<ApiResponse<T>> GetAsync<T>(string route, CancellationToken ct = default)

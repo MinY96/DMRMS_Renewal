@@ -4,8 +4,8 @@ using DM_RMS.Wpf.Models;
 using DM_RMS.Wpf.Services;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using System.Data;
 using System.ComponentModel;
+using System.Data;
 using System.Windows.Input;
 
 namespace DM_RMS.Wpf.ViewModels;

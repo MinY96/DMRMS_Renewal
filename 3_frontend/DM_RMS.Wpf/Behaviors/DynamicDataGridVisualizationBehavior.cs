@@ -1,9 +1,8 @@
-﻿using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Media;
-using DM_RMS.Wpf.Converters;
+﻿using DM_RMS.Wpf.Converters;
 using DM_RMS.Wpf.Models;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 using Binding = System.Windows.Data.Binding;
 using Brush = System.Windows.Media.Brush;
 using Brushes = System.Windows.Media.Brushes;
