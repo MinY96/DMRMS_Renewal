@@ -20,8 +20,8 @@ def main() -> None:
     try:
         collector = create_collector()
         parser = create_recipe_parser()
-        # collector.run()
-        # parser.run()
+        collector.run()
+        parser.run()
         MatchingAggregator.run()
     finally:
         close_pools()

@@ -4,7 +4,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from threading import Lock
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping
 import re
 import oracledb
 import pandas as pd

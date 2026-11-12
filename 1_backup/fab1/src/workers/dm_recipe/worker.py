@@ -3,7 +3,6 @@
 from __future__ import annotations
 import logging
 from pathlib import Path
-from typing import Any
 import pandas as pd
 from src.config.config import PARSE_BATCH_SIZE
 from src.databases import PostgresCRUD
