@@ -8,8 +8,17 @@ https://github.com/MinY96/DMRMS_Renewal.git
 - 현재: 수정할 Master 설정값의 타입이 STRING일 경우 
         "SELECT DISTINCT para_value FROM dm_master_recipe_para WHERE para_nm=%s ORDER BY para_value"
         해당 쿼리로 고유값을 가져와서 화면상에서는 콤보박스로 선택할 수 있게 되어 있음
-- 수정: "SELECT DISTINCT para_value FROM dm_recipe_para WHERE para_nm=%s AND master_key LIKE %s ORDER BY para_value"
-        로 수정해야 함. 실제 파싱값들 중에서 선택해야 가능한 선택지가 보임. 그리고 기존에는 model을 쿼리에서 WHERE절에 넣지 않았어서
+- 수정: 
+"
+select distinct drp.para_value 
+from dm_recipe_info dri
+left join dm_recipe_para drp
+on dri.recipe_key = drp.recipe_key
+where dri.model = 'KLA2139'
+	and drp.para_nm = 'edge'
+order by drp.para_value
+"
+        이런 식으로 쿼리를 수정해야 함. 실제 파싱값들 중에서 선택해야 가능한 선택지가 보임. 그리고 기존에는 model을 쿼리에서 WHERE절에 넣지 않았어서
         타 모델의 파싱값이 콤보박스에 띄워질 수 있었음
         근데 이렇게 될 경우 F0/F1/F2 와 같이 "/" 문자로 여러 값을 Master 설정값에 지정할 수가 없음.
         이를 대비해서 콤보박스는 자체 입력이 가능하도록 변경해야 함.
