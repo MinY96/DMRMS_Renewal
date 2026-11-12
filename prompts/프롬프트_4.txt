@@ -1,8 +1,7 @@
 
 https://github.com/MinY96/DMRMS_Renewal.git
 
-해당 github에 너가 준 코드를 반영한 후에 일부 서버 코드 에러를 수정해서 업데이트했어.
-확인해봐.
+해당 github에 최신본이 업데이트되어 있어.
 
 4차로 변경이 필요한 부분은 다음과 같아
 1. Master Recipe 관리 탭: Master 상세 Parameter 수정 시
