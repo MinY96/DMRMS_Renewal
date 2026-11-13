@@ -63,6 +63,13 @@
                                 <TextBlock Text="Recipe 리스트" Style="{StaticResource SectionTitleTextStyle}" />
                                 <TextBlock Text="체크 시 우측 처리 목록에 반영되며, 행 더블클릭 시 하단에서 상세 Parameter를 조회합니다."
                                            Style="{StaticResource MutedTextStyle}" />
+                                <!-- RecipeRowHighlightBehavior.NoMasterBackground(#E2EFDA)와 동일한 범례 색상 -->
+                                <StackPanel Orientation="Horizontal" Margin="0,5,0,0" VerticalAlignment="Center">
+                                    <Border Width="14" Height="14" CornerRadius="2" BorderThickness="1"
+                                            Background="#E2EFDA" BorderBrush="#AAC99A" Margin="0,0,7,0" />
+                                    <TextBlock Text="초록색 하이라이트: Master 생성이 필요한 Recipe입니다."
+                                               Foreground="#006100" FontSize="12" VerticalAlignment="Center" />
+                                </StackPanel>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
                                 <Border Style="{StaticResource RowCountBadgeStyle}" Margin="0,0,6,0">

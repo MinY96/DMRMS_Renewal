@@ -108,41 +108,72 @@ def master_list(filters: dict | None = None) -> list[dict]:
 
 
 def master_detail(master_key: str) -> dict:
-    """지정한 Master Key의 Parameter 상세정보를 조회한다.
+    """Master 상세 Parameter 및 해당 Model의 실제 파싱 STRING 고유값을 조회한다.
 
-    Args:
-        master_key: 입력값 (str).
-
-    Returns:
-        dict: 처리 결과.
+    Master Key에 소속된 Model은 요청 파라미터로 받지 않고 Master 기준정보에서
+    조회한다. STRING Parameter는 한 번의 IN/ANY 배치 쿼리로 값을 가져와
+    Parameter 수에 따른 N+1 SQL 호출을 방지한다.
     """
     rows = PostgresCRUD.select_query(
         """
         SELECT dmrp.para_nm AS parameter_name,
-            TRIM(dmrp.para_value) AS display_value,
-            COALESCE(dpt.para_type, 'STRING') AS control_type
-        FROM f1.dm_master_recipe_para dmrp
-        LEFT JOIN f1.dm_para_type dpt
-            ON dmrp.para_nm=dpt.para_nm
-        WHERE dmrp.master_key=%s
-            AND dmrp.para_nm<>'mode'
+               TRIM(dmrp.para_value) AS display_value,
+               COALESCE(dpt.para_type, 'STRING') AS control_type,
+               dmri.model AS master_model
+        FROM dm_master_recipe_para dmrp
+        JOIN dm_master_recipe_info dmri
+          ON dmri.master_key = dmrp.master_key
+        LEFT JOIN dm_para_type dpt
+          ON dpt.para_nm = dmrp.para_nm
+        WHERE dmrp.master_key = %s
+          AND dmrp.para_nm <> 'mode'
         ORDER BY dmrp.para_nm
         """,
         (master_key,),
     ).to_dict(orient="records")
+
+    string_names = sorted(
+        {
+            str(row["parameter_name"])
+            for row in rows
+            if str(row.get("control_type") or "STRING").upper() == "STRING"
+        }
+    )
+    options_by_name: dict[str, list[str]] = {name: [] for name in string_names}
+
+    if string_names:
+        # 동일 Master Key의 모든 행은 하나의 Model에 속한다.
+        model = rows[0]["master_model"]
+        parsed_values = PostgresCRUD.select_query(
+            """
+            SELECT DISTINCT drp.para_nm AS parameter_name,
+                            drp.para_value AS para_value
+            FROM dm_recipe_info dri
+            JOIN dm_recipe_para drp
+              ON dri.recipe_key = drp.recipe_key
+            WHERE dri.model = %s
+              AND dri.is_remove = false
+              AND drp.para_nm = ANY(%s)
+              AND drp.para_value IS NOT NULL
+              AND BTRIM(drp.para_value) <> ''
+            ORDER BY drp.para_nm, drp.para_value
+            """,
+            (model, string_names),
+        ).to_dict(orient="records")
+        for item in parsed_values:
+            name = item["parameter_name"]
+            if name in options_by_name:
+                options_by_name[name].append(item["para_value"].upper())
+
     for row in rows:
-        row["allowed_values"] = []
-        if str(row["control_type"]).upper() == "STRING":
-            row["allowed_values"] = PostgresCRUD.select_query_by_list(
-                """
-                SELECT DISTINCT para_value 
-                FROM dm_master_recipe_para 
-                WHERE para_nm=%s 
-                ORDER BY para_value
-                """,
-                (row["parameter_name"],),
-            )
-    return {"master_key": master_key, "parameters": [_clone_parameter(p) for p in rows]}
+        row["allowed_values"] = list(
+            set(options_by_name.get(row["parameter_name"], []))
+        )
+
+    return {
+        "master_key": master_key,
+        "parameters": [_clone_parameter(row) for row in rows],
+    }
 
 
 def parameter_options(model: str) -> list[dict]:
@@ -181,8 +212,9 @@ def parameter_options(model: str) -> list[dict]:
     for item in result:
         item["control_type"] = str(item.get("control_type") or "STRING").upper()
         item["allowed_values"] = []
-    string_names = [item["parameter_name"] for item in result
-                    if item["control_type"] == "STRING"]
+    string_names = [
+        item["parameter_name"] for item in result if item["control_type"] == "STRING"
+    ]
     if not string_names:
         return result
 

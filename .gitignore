@@ -24,3 +24,9 @@ obj/
 Thumbs.db
 
 .dmrms_patch_backup_v3_20261111_102019
+.dmrms_v4_backup_20261112_121351
+
+1_backup/fab1/wheelhouse/
+1_backup/fab2/wheelhouse/
+2_server/fab1/wheelhouse/
+2_server/fab2/wheelhouse/

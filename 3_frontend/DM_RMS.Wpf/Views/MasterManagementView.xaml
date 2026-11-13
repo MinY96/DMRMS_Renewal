@@ -32,8 +32,11 @@
 
         <DataTemplate x:Key="StringEditTemplate">
             <ComboBox ItemsSource="{Binding AllowedValues}"
-                      SelectedItem="{Binding EditValue, UpdateSourceTrigger=PropertyChanged}"
+                      Text="{Binding EditValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                      IsEditable="True"
+                      IsTextSearchEnabled="False"
                       IsEnabled="{Binding IsEditMode}"
+                      ToolTip="실제 파싱값 선택 또는 직접 입력 가능. 다중 값은 /로 구분하세요(예: F0/F1/F2)."
                       MinWidth="140" />
         </DataTemplate>
 
@@ -272,6 +275,8 @@
                             <TextBlock Text="Master 상세 Parameter" Style="{StaticResource SectionTitleTextStyle}" />
                             <TextBlock Text="Parameter별 Master 설정값을 확인하고, 편집 모드에서 변경된 행만 저장합니다."
                                        Style="{StaticResource MutedTextStyle}" />
+                            <TextBlock Text="STRING 타입은 실제 파싱값을 선택하거나 직접 입력할 수 있습니다. 여러 값은 /로 구분하세요 (예: F0/F1/F2)."
+                                       Foreground="#006100" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0" />
                         </StackPanel>
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
                             <Border Style="{StaticResource RowCountBadgeStyle}" Margin="0,0,6,0">
